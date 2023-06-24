@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "doctran"
+version = "0.0.0"
+description = "Document transformation framework for vector based retrieval"
+authors = ["Jason Fan <jason.wc.fan@gmail.com>", "Ayan Bandyopadhyay <ayanb9440@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^1.10.9"
+requests = "^2.31.0"
+mailbox = "^0.4"
+bs4 = "^0.0.1"
+lxml = "^4.9.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
