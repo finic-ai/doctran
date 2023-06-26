@@ -2,6 +2,8 @@ import os
 import asyncio
 import mailbox
 import bs4
+from email import message_from_string, message_from_bytes
+from email.message import Message
 from doctran import Doctran, Document, ExtractProperty
 
 ## Test with gmail mbox file
@@ -54,8 +56,12 @@ class GmailMboxMessage():
                 yield msg
 
     def _read_email_text(self, msg: mailbox.mboxMessage):
-        content_type = 'NA' if isinstance(msg, str) else msg.get_content_type()
-        encoding = 'NA' if isinstance(msg, str) else msg.get('Content-Transfer-Encoding', 'NA')
+        if isinstance(msg, str):
+            msg = message_from_string(msg)
+        elif isinstance(msg, bytes):
+            msg = message_from_bytes(msg)
+        content_type = msg.get_content_type()
+        encoding = msg.get('Content-Transfer-Encoding', 'NA')
         if 'text/plain' in content_type and 'base64' not in encoding:
             msg_text = msg.get_payload(decode=True)
         elif 'text/html' in content_type and 'base64' not in encoding:
@@ -72,38 +78,33 @@ async def run():
     num_entries = len(mbox_obj)
     print("Loaded {num_entries} entries from mbox file".format(num_entries=num_entries))
 
-    doctran = Doctran(openai_api_key=os.environ['OPENAI_API_KEY'])
+    doctran = Doctran(openai_api_key=os.environ['OPENAI_API_KEY'], openai_model="gpt-4-0613")
 
-    for i in range(0, 10):
+    for i in range(500, 525):
         email_obj = mbox_obj[i]
         email_data = GmailMboxMessage(email_obj)
         parsed_email = email_data.parse_email()
+        # Approximate check to ensure we're not sending emails > 8000 tokens
+        if len(str(parsed_email)) > 25000:
+            continue
         print("Parsing email {} of {}".format(i, num_entries))
         # Extract parameters
         document = doctran.parse(content=str(parsed_email), content_type="text")
-        # print(document)
         properties = [
             ExtractProperty(
-                name="particpants", 
-                description="A list of all the participants in the email thread",
-                type="array",
-                items={
-                    "name": "particpant",
-                    "description": "A participant in the email thread",
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "description": "The name of the participant"
-                        },
-                        "email": {
-                            "type": "string",
-                            "description": "The email address of the participant"
-                        }
-                    }
-                },
+                name="classification", 
+                description="The type of email this is",
+                type="string",
+                enum=["meeting", "investor_call", "hiring", "spam", "automated_notice", "other"],
                 required=True
-            )]
+            ),
+            ExtractProperty(
+                name="name", 
+                description="The name of the person Jason is emailing",
+                type="string",
+                required=True
+            )
+        ]
         result = await doctran.extract(document=document, properties=properties)
         print(result)
 
