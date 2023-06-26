@@ -1,6 +1,8 @@
+import os
+import asyncio
 import mailbox
 import bs4
-import quopri
+from doctran import Doctran, Document, ExtractProperty
 
 ## Test with gmail mbox file
 
@@ -63,15 +65,46 @@ class GmailMboxMessage():
         else:
             msg_text = None
         return (content_type, encoding, msg_text)
-    
-mbox_obj = mailbox.mbox('path/to/mbox/file')
 
-num_entries = len(mbox_obj)
-print("Loaded {num_entries} entries from mbox file".format(num_entries=num_entries))
+async def run():
+    mbox_obj = mailbox.mbox('/Users/jasonfan/Documents/code/Takeout/Mail/All mail Including Spam and Trash.mbox')
 
-for i in range(10, 30):
-    email_obj = mbox_obj[i]
-    email_data = GmailMboxMessage(email_obj)
-    parsed_email = email_data.parse_email()
-    print("Parsing email {} of {}".format(i, num_entries))
-    print(parsed_email)
+    num_entries = len(mbox_obj)
+    print("Loaded {num_entries} entries from mbox file".format(num_entries=num_entries))
+
+    doctran = Doctran(openai_api_key=os.environ['OPENAI_API_KEY'])
+
+    for i in range(0, 10):
+        email_obj = mbox_obj[i]
+        email_data = GmailMboxMessage(email_obj)
+        parsed_email = email_data.parse_email()
+        print("Parsing email {} of {}".format(i, num_entries))
+        # Extract parameters
+        document = doctran.parse(content=str(parsed_email), content_type="text")
+        # print(document)
+        properties = [
+            ExtractProperty(
+                name="particpants", 
+                description="A list of all the participants in the email thread",
+                type="array",
+                items={
+                    "name": "particpant",
+                    "description": "A participant in the email thread",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the participant"
+                        },
+                        "email": {
+                            "type": "string",
+                            "description": "The email address of the participant"
+                        }
+                    }
+                },
+                required=True
+            )]
+        result = await doctran.extract(document=document, properties=properties)
+        print(result)
+
+asyncio.run(run())

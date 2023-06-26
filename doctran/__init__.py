@@ -1,1 +1,1 @@
-from .doctran import Doctran
+from .doctran import Doctran, Document, ExtractProperty

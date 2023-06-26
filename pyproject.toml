@@ -12,6 +12,8 @@ requests = "^2.31.0"
 mailbox = "^0.4"
 bs4 = "^0.0.1"
 lxml = "^4.9.2"
+openai = "^0.27.8"
+jsonschema = "^4.17.3"
 
 
 [build-system]
