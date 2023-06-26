@@ -32,6 +32,7 @@ class Document(BaseModel):
     raw_content: str
     transformed_content: str
     interrogation: Optional[Dict[str, Any]] = None
+    extracted_properties: Optional[Dict[str, Any]] = None
     applied_transformations: Optional[List[Transformation]] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -74,10 +75,10 @@ class Doctran:
             uri = str(uuid.uuid4())
         if content_type == ContentType.text.value:
             # TODO: Recursively chunk the document
-            document = Document(id=str(uuid.uuid4()), content_type=content_type, content=content, uri=uri, metadata=metadata)
+            document = Document(id=str(uuid.uuid4()), content_type=content_type, raw_content=content, transformed_content=content, uri=uri, metadata=metadata)
             return document
 
-    async def extract(self, *, document: Document, properties: List[ExtractProperty]) -> dict[str, any]:
+    async def extract(self, *, document: Document, properties: List[ExtractProperty]) -> Document:
         '''
         Use OpenAI function calling to extract structured data from the document.
 
@@ -105,7 +106,7 @@ class Doctran:
         try:
             function_call = OpenAIFunctionCall(
                 model=self.openai_model, 
-                messages=[{"role": "user", "content": document.content}], 
+                messages=[{"role": "user", "content": document.transformed_content}], 
                 functions=[{
                     "name": "extract_information",
                     "description": "Extract structured data from a raw text document.",
@@ -116,7 +117,8 @@ class Doctran:
             # pdb.set_trace()
             completion = self.openai.ChatCompletion.create(**function_call.dict())
             arguments = completion.choices[0].message["function_call"]["arguments"]
-            return json.loads(arguments)
+            document.extracted_properties = json.loads(arguments)
+            return document
         except Exception as e:
             raise Exception(f"OpenAI function call failed: {e}")
 
@@ -125,7 +127,7 @@ class Doctran:
         pass
     
     # TODO: Use OpenAI function call to remove irrelevant information from a document
-    def denoise(self, *, document: Document) -> Document:
+    def denoise(self, *, document: Document, topics: List[str]) -> Document:
         pass
     
     # TODO: Use OpenAI function call to convert documents to question and answer format
