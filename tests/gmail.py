@@ -73,7 +73,7 @@ class GmailMboxMessage():
         return (content_type, encoding, msg_text)
 
 async def run():
-    mbox_obj = mailbox.mbox('/Users/jasonfan/Documents/code/Takeout/Mail/All mail Including Spam and Trash.mbox')
+    mbox_obj = mailbox.mbox('path/to/mbox/file')
 
     num_entries = len(mbox_obj)
     print("Loaded {num_entries} entries from mbox file".format(num_entries=num_entries))
@@ -93,14 +93,14 @@ async def run():
         properties = [
             ExtractProperty(
                 name="classification", 
-                description="The type of email this is",
+                description="A summary of this email ",
                 type="string",
                 enum=["meeting", "investor_call", "hiring", "spam", "automated_notice", "other"],
                 required=True
             ),
             ExtractProperty(
                 name="name", 
-                description="The name of the person Jason is emailing",
+                description="The name of the person NAME is emailing",
                 type="string",
                 required=True
             )

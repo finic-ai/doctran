@@ -3,7 +3,6 @@ import json
 import openai
 import uuid
 from enum import Enum
-from jsonschema import Draft7Validator
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel
 import requests
@@ -21,7 +20,6 @@ class Transformation(Enum):
     compress = "compress"
     denoise = "denoise"
     extract = "extract"
-    distill = "distill"
     interrogate = "interrogate"
     redact = "redact"
     translate = "translate"
@@ -31,10 +29,10 @@ class Document(BaseModel):
     uri: str
     id: str
     content_type: ContentType
-    content: str
-    transformations: Optional[Dict[Transformation, str]]
-    parent: Optional["Document"] = None
-    children: Optional[List["Document"]] = None
+    raw_content: str
+    transformed_content: str
+    interrogation: Optional[Dict[str, Any]] = None
+    applied_transformations: Optional[List[Transformation]] = None
     metadata: Optional[Dict[str, Any]] = None
 
     def get_token_size(self):
@@ -54,6 +52,7 @@ class ExtractProperty(BaseModel):
     description: str
     type: Literal["string", "number", "boolean", "array", "object"]
     items: Optional[List | Dict[str, Any]]
+    enum: Optional[List[str]]
     required: bool = True
 
 class Doctran:
@@ -78,7 +77,7 @@ class Doctran:
             document = Document(id=str(uuid.uuid4()), content_type=content_type, content=content, uri=uri, metadata=metadata)
             return document
 
-    async def extract(self, *, document: Document, properties: List[ExtractProperty], recursive: bool = False) -> dict[str, any]:
+    async def extract(self, *, document: Document, properties: List[ExtractProperty]) -> dict[str, any]:
         '''
         Use OpenAI function calling to extract structured data from the document.
 
@@ -91,18 +90,15 @@ class Doctran:
             "required": [],
         }
         try:
-            for property in properties:
-                # pdb.set_trace()
-                function_parameters["properties"][property.name] = {
-                    "type": property.type,
-                    "description": property.description,
+            for prop in properties:
+                function_parameters["properties"][prop.name] = {
+                    "type": prop.type,
+                    "description": prop.description,
+                    **({"items": prop.items} if prop.items else {}),
+                    **({"enum": prop.enum} if prop.enum else {}),
                 }
-                if property.items:
-                    function_parameters["properties"][property.name]["items"] = property.items
-                if property.required:
-                    function_parameters["required"].append(property.name)
-                # if not Draft7Validator.check_schema(function_parameters["properties"][property.name]):
-                #     raise Exception(f"Property {property.name} is not a valid JSON schema.")
+                if prop.required:
+                    function_parameters["required"].append(prop.name)
         except Exception as e:
             raise Exception(f"Invalid properties provided: {e}")
 
@@ -124,8 +120,23 @@ class Doctran:
         except Exception as e:
             raise Exception(f"OpenAI function call failed: {e}")
 
-    def compress(self, *, document: Document, token_limit: int, recursive: bool = False):
+    # TODO: Use OpenAI function call to compress a document to under a certain token limit
+    def compress(self, *, document: Document, token_limit: int) -> Document:
+        pass
+    
+    # TODO: Use OpenAI function call to remove irrelevant information from a document
+    def denoise(self, *, document: Document) -> Document:
+        pass
+    
+    # TODO: Use OpenAI function call to convert documents to question and answer format
+    def interrogate(self, *, document: Document) -> List[dict[str, str]]:
+        pass
+    
+    # TODO: Use presidio or similar libraries to redact sensitive information. Cannot use a hosted 3rd party
+    # service for this because of privacy concerns.
+    def redact(self, *, document: Document) -> Document:
         pass
 
-    def denoise(self, *, document: Document, recursive: bool = False):
+    # TODO: Use OpenAI function call to translate this document to another language
+    def translate(self, *, document: Document, language: str) -> Document:
         pass
