@@ -24,6 +24,38 @@ class Transformation(Enum):
     redact = "redact"
     translate = "translate"
 
+# Not easily retrievalble from the presidio library so it should be kept up to date manually based on
+# https://microsoft.github.io/presidio/supported_entities/
+class RecognizerEntity(Enum):
+    CREDIT_CARD = "CREDIT_CARD"
+    CRYPTO = "CRYPTO"
+    DATE_TIME = "DATE_TIME"
+    EMAIL_ADDRESS = "EMAIL_ADDRESS"
+    IBAN_CODE = "IBAN_CODE"
+    IP_ADDRESS = "IP_ADDRESS"
+    NRP = "NRP"
+    PHONE_NUMBER = "PHONE_NUMBER"
+    URL = "URL"
+    LOCATION = "LOCATION"
+    PERSON = "PERSON"
+    MEDICAL_LICENSE = "MEDICAL_LICENSE"
+    US_BANK_NUMBER = "US_BANK_NUMBER"
+    US_DRIVER_LICENSE = "US_DRIVER_LICENSE"
+    US_ITIN = "US_ITIN"
+    US_PASSPORT = "US_PASSPORT"
+    US_SSN = "US_SSN"
+    UK_NHS = "UK_NHS"
+    ES_NIF = "ES_NIF"
+    IT_FISCAL_CODE = "IT_FISCAL_CODE"
+    IT_DRIVER_LICENSE = "IT_DRIVER_LICENSE"
+    IT_VAT_CODE = "IT_VAT_CODE"
+    IT_PASSPORT = "IT_PASSPORT"
+    IT_IDENTITY_CARD = "IT_IDENTITY_CARD"
+    SG_NRIC_FIN = "SG_NRIC_FIN"
+    AU_ABN = "AU_ABN"
+    AU_ACN = "AU_ACN"
+    AU_TFN = "AU_TFN"
+    AU_MEDICARE_NUMBER = "AU_MEDICARE_NUMBER"
 
 class Document(BaseModel):
     uri: str
@@ -90,18 +122,15 @@ class Doctran:
             "properties": {},
             "required": [],
         }
-        try:
-            for prop in properties:
-                function_parameters["properties"][prop.name] = {
-                    "type": prop.type,
-                    "description": prop.description,
-                    **({"items": prop.items} if prop.items else {}),
-                    **({"enum": prop.enum} if prop.enum else {}),
-                }
-                if prop.required:
-                    function_parameters["required"].append(prop.name)
-        except Exception as e:
-            raise Exception(f"Invalid properties provided: {e}")
+        for prop in properties:
+            function_parameters["properties"][prop.name] = {
+                "type": prop.type,
+                "description": prop.description,
+                **({"items": prop.items} if prop.items else {}),
+                **({"enum": prop.enum} if prop.enum else {}),
+            }
+            if prop.required:
+                function_parameters["required"].append(prop.name)
 
         try:
             function_call = OpenAIFunctionCall(
@@ -117,7 +146,10 @@ class Doctran:
             # pdb.set_trace()
             completion = self.openai.ChatCompletion.create(**function_call.dict())
             arguments = completion.choices[0].message["function_call"]["arguments"]
-            document.extracted_properties = json.loads(arguments)
+            try:
+                document.extracted_properties = json.loads(arguments)
+            except Exception as e:
+                raise Exception(f"OpenAI returned malformatted json: {e} {arguments}")
             return document
         except Exception as e:
             raise Exception(f"OpenAI function call failed: {e}")
@@ -136,8 +168,47 @@ class Doctran:
     
     # TODO: Use presidio or similar libraries to redact sensitive information. Cannot use a hosted 3rd party
     # service for this because of privacy concerns.
-    def redact(self, *, document: Document) -> Document:
-        pass
+    def redact(self, *, document: Document, entities: List[RecognizerEntity | str] = None) -> Document:
+        '''
+        Use presidio to redact sensitive information from the document.
+
+        Returns:
+            document: the document with content redacted from document.transformed_content
+        '''
+        for entity, i in entities:
+            if entity in RecognizerEntity.__members__:
+                entities[i] = RecognizerEntity[entity]
+            elif entity not in RecognizerEntity.__members__.values():
+                raise Exception(f"Invalid entity type: {entity}")
+
+        import spacy
+        from presidio_analyzer import AnalyzerEngine
+        from presidio_anonymizer import AnonymizerEngine
+
+        try:
+            spacy.load("en_core_web_lg")
+        except OSError:
+            while True:
+                response = input("en_core_web_lg model not found, but is required to run presidio-anonymizer. Download it now? (Y/n)")
+                if response.lower() in ["n", "no"]:
+                    raise Exception("Cannot run presidio-anonymizer without en_core_web_lg model.")
+                elif response.lower() in ["y", "yes", ""]:
+                    print("Downloading...")
+                    from spacy.cli.download import download
+                    download(model="en_core_web_lg")
+                    break
+                else:
+                    print("Invalid response.")
+        text = document.transformed_content
+        analyzer = AnalyzerEngine()
+        anonymizer = AnonymizerEngine()
+        results = analyzer.analyze(text=text,
+                                   entities=[entity.value for entity in entities] if entities else None,
+                                   language='en')
+        anonymized_text = anonymizer.anonymize(text=text, analyzer_results=results)
+        print(anonymized_text)
+        document.transformed_content = str(anonymized_text)
+
 
     # TODO: Use OpenAI function call to translate this document to another language
     def translate(self, *, document: Document, language: str) -> Document:
