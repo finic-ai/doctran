@@ -110,8 +110,8 @@ async def run():
         ]
         document = await doctran.extract(document=document, properties=properties)
         print("\nEmail Subject: " + parsed_email.get('subject'))
-        print("Email Body: " + parsed_email.get('text')[0][2])
-        print("\n👴 Written by boomer or millenial:\n" + '\033[1m' + json.dumps(document.extracted_properties["millenial_or_boomer"]).encode("utf-8").decode("unicode_escape") + '\033[0m')
-        print("\n✨ Rewritten as Gen Z:\n" + '\033[1m' + json.dumps(document.extracted_properties["as_gen_z"]) + '\033[0m')
+        print("Email Body: " + parsed_email.get('text')[0][2][:250] + "...")
+        print("\n👴 Written by boomer or millenial:\n" + '\033[1m' + json.dumps(document.extracted_properties["millenial_or_boomer"], ensure_ascii=False) + '\033[0m')
+        print("\n✨ Rewritten as Gen Z:\n" + '\033[1m' + json.dumps(document.extracted_properties["as_gen_z"], ensure_ascii=False) + '\033[0m')
 
 asyncio.run(run())
