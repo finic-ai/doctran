@@ -212,6 +212,47 @@ lxml = ["lxml"]
 name = "blis"
 version = "0.7.9"
 description = "The Blis BLAS-like linear algebra library, as a self-contained C-extension."
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "blis-0.7.9-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b3ea73707a7938304c08363a0b990600e579bfb52dece7c674eafac4bf2df9f7"},
+    {file = "blis-0.7.9-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e85993364cae82707bfe7e637bee64ec96e232af31301e5c81a351778cb394b9"},
+    {file = "blis-0.7.9-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d205a7e69523e2bacdd67ea906b82b84034067e0de83b33bd83eb96b9e844ae3"},
+    {file = "blis-0.7.9-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b9737035636452fb6d08e7ab79e5a9904be18a0736868a129179cd9f9ab59825"},
+    {file = "blis-0.7.9-cp310-cp310-win_amd64.whl", hash = "sha256:d3882b4f44a33367812b5e287c0690027092830ffb1cce124b02f64e761819a4"},
+    {file = "blis-0.7.9-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:3dbb44311029263a6f65ed55a35f970aeb1d20b18bfac4c025de5aadf7889a8c"},
+    {file = "blis-0.7.9-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:6fd5941bd5a21082b19d1dd0f6d62cd35609c25eb769aa3457d9877ef2ce37a9"},
+    {file = "blis-0.7.9-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:97ad55e9ef36e4ff06b35802d0cf7bfc56f9697c6bc9427f59c90956bb98377d"},
+    {file = "blis-0.7.9-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f7b6315d7b1ac5546bc0350f5f8d7cc064438d23db19a5c21aaa6ae7d93c1ab5"},
+    {file = "blis-0.7.9-cp311-cp311-win_amd64.whl", hash = "sha256:5fd46c649acd1920482b4f5556d1c88693cba9bf6a494a020b00f14b42e1132f"},
+    {file = "blis-0.7.9-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:db2959560dcb34e912dad0e0d091f19b05b61363bac15d78307c01334a4e5d9d"},
+    {file = "blis-0.7.9-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c0521231bc95ab522f280da3bbb096299c910a62cac2376d48d4a1d403c54393"},
+    {file = "blis-0.7.9-cp36-cp36m-win_amd64.whl", hash = "sha256:d811e88480203d75e6e959f313fdbf3326393b4e2b317067d952347f5c56216e"},
+    {file = "blis-0.7.9-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:5cb1db88ab629ccb39eac110b742b98e3511d48ce9caa82ca32609d9169a9c9c"},
+    {file = "blis-0.7.9-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c399a03de4059bf8e700b921f9ff5d72b2a86673616c40db40cd0592051bdd07"},
+    {file = "blis-0.7.9-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d4eb70a79562a211bd2e6b6db63f1e2eed32c0ab3e9ef921d86f657ae8375845"},
+    {file = "blis-0.7.9-cp37-cp37m-win_amd64.whl", hash = "sha256:3e3f95e035c7456a1f5f3b5a3cfe708483a00335a3a8ad2211d57ba4d5f749a5"},
+    {file = "blis-0.7.9-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:179037cb5e6744c2e93b6b5facc6e4a0073776d514933c3db1e1f064a3253425"},
+    {file = "blis-0.7.9-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:d0e82a6e0337d5231129a4e8b36978fa7b973ad3bb0257fd8e3714a9b35ceffd"},
+    {file = "blis-0.7.9-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6d12475e588a322e66a18346a3faa9eb92523504042e665c193d1b9b0b3f0482"},
+    {file = "blis-0.7.9-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4d5755ef37a573647be62684ca1545698879d07321f1e5b89a4fd669ce355eb0"},
+    {file = "blis-0.7.9-cp38-cp38-win_amd64.whl", hash = "sha256:b8a1fcd2eb267301ab13e1e4209c165d172cdf9c0c9e08186a9e234bf91daa16"},
+    {file = "blis-0.7.9-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:8275f6b6eee714b85f00bf882720f508ed6a60974bcde489715d37fd35529da8"},
+    {file = "blis-0.7.9-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:7417667c221e29fe8662c3b2ff9bc201c6a5214bbb5eb6cc290484868802258d"},
+    {file = "blis-0.7.9-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b5f4691bf62013eccc167c38a85c09a0bf0c6e3e80d4c2229cdf2668c1124eb0"},
+    {file = "blis-0.7.9-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f5cec812ee47b29107eb36af9b457be7191163eab65d61775ed63538232c59d5"},
+    {file = "blis-0.7.9-cp39-cp39-win_amd64.whl", hash = "sha256:d81c3f627d33545fc25c9dcb5fee66c476d89288a27d63ac16ea63453401ffd5"},
+    {file = "blis-0.7.9.tar.gz", hash = "sha256:29ef4c25007785a90ffc2f0ab3d3bd3b75cd2d7856a9a482b7d0dac8d511a09d"},
+]
+
+[package.dependencies]
+numpy = ">=1.15.0"
+
+[[package]]
+name = "blis"
+version = "0.7.9"
+description = "The Blis BLAS-like linear algebra library, as a self-contained C-extension."
 optional = false
 python-versions = "*"
 files = [
@@ -260,6 +301,18 @@ files = [
 
 [package.dependencies]
 beautifulsoup4 = "*"
+
+[[package]]
+name = "catalogue"
+version = "2.0.8"
+description = "Super lightweight function registries for your library"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "catalogue-2.0.8-py3-none-any.whl", hash = "sha256:2d786e229d8d202b4f8a2a059858e45a2331201d831e39746732daa704b99f69"},
+    {file = "catalogue-2.0.8.tar.gz", hash = "sha256:b325c77659208bfb6af1b0d93b1a1aa4112e1bb29a4c5ced816758a722f0e388"},
+]
 
 [[package]]
 name = "catalogue"
@@ -442,6 +495,21 @@ files = [
     {file = "charset_normalizer-3.1.0-cp39-cp39-win_amd64.whl", hash = "sha256:830d2948a5ec37c386d3170c483063798d7879037492540f10a475e3fd6f244b"},
     {file = "charset_normalizer-3.1.0-py3-none-any.whl", hash = "sha256:3d9098b479e78c85080c98e1e35ff40b4a31d8953102bb0fd7d1b6f8a2111a3d"},
 ]
+
+[[package]]
+name = "click"
+version = "8.1.3"
+description = "Composable command line interface toolkit"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "click-8.1.3-py3-none-any.whl", hash = "sha256:bb4d8133cb15a609f44e8213d9b391b0809795062913b383c62be0ee95b1db48"},
+    {file = "click-8.1.3.tar.gz", hash = "sha256:7682dc8afb30297001674575ea00d1814d808d6a36af415a82bd481d37ba7b8e"},
+]
+
+[package.dependencies]
+colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "click"
@@ -2084,6 +2152,73 @@ urllib3 = ">=1.21.1,<3"
 [package.extras]
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
+
+[[package]]
+name = "requests-file"
+version = "1.5.1"
+description = "File transport adapter for Requests"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "requests-file-1.5.1.tar.gz", hash = "sha256:07d74208d3389d01c38ab89ef403af0cfec63957d53a0081d8eca738d0247d8e"},
+    {file = "requests_file-1.5.1-py2.py3-none-any.whl", hash = "sha256:dfe5dae75c12481f68ba353183c53a65e6044c923e64c24b2209f6c7570ca953"},
+]
+
+[package.dependencies]
+requests = ">=1.0.0"
+six = "*"
+
+[[package]]
+name = "setuptools"
+version = "68.0.0"
+description = "Easily download, build, install, upgrade, and uninstall Python packages"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "setuptools-68.0.0-py3-none-any.whl", hash = "sha256:11e52c67415a381d10d6b462ced9cfb97066179f0e871399e006c4ab101fc85f"},
+    {file = "setuptools-68.0.0.tar.gz", hash = "sha256:baf1fdb41c6da4cd2eae722e135500da913332ab3f2f5c7d33af9b492acb5235"},
+]
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-hoverxref (<2)", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (==0.8.3)", "sphinx-reredirects", "sphinxcontrib-towncrier"]
+testing = ["build[virtualenv]", "filelock (>=3.4.0)", "flake8-2020", "ini2toml[lite] (>=0.9)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pip (>=19.1)", "pip-run (>=8.8)", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-mypy (>=0.9.1)", "pytest-perf", "pytest-ruff", "pytest-timeout", "pytest-xdist", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel"]
+testing-integration = ["build[virtualenv]", "filelock (>=3.4.0)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pytest", "pytest-enabler", "pytest-xdist", "tomli", "virtualenv (>=13.0.0)", "wheel"]
+
+[[package]]
+name = "six"
+version = "1.16.0"
+description = "Python 2 and 3 compatibility utilities"
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
+files = [
+    {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
+    {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
+]
+
+[[package]]
+name = "smart-open"
+version = "6.3.0"
+description = "Utils for streaming large files (S3, HDFS, GCS, Azure Blob Storage, gzip, bz2...)"
+category = "main"
+optional = false
+python-versions = ">=3.6,<4.0"
+files = [
+    {file = "smart_open-6.3.0-py3-none-any.whl", hash = "sha256:b4c9ae193ad6d3e7add50944b86afa0d150bd821ab8ec21edb26d9a06b66f6a8"},
+    {file = "smart_open-6.3.0.tar.gz", hash = "sha256:d5238825fe9a9340645fac3d75b287c08fbb99fb2b422477de781c9f5f09e019"},
+]
+
+[package.extras]
+all = ["azure-common", "azure-core", "azure-storage-blob", "boto3", "google-cloud-storage (>=2.6.0)", "paramiko", "requests"]
+azure = ["azure-common", "azure-core", "azure-storage-blob"]
+gcs = ["google-cloud-storage (>=2.6.0)"]
+http = ["requests"]
+s3 = ["boto3"]
+ssh = ["paramiko"]
+test = ["azure-common", "azure-core", "azure-storage-blob", "boto3", "google-cloud-storage (>=2.6.0)", "moto[server]", "paramiko", "pytest", "pytest-rerunfailures", "requests", "responses"]
+webhdfs = ["requests"]
 
 [[package]]
 name = "requests-file"

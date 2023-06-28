@@ -73,13 +73,35 @@ class GmailMboxMessage():
             msg_text = None
         return (content_type, encoding, msg_text)
 
+async def test_extract(doctran: Doctran, document: Document, parsed_email: dict):
+    properties = [
+        ExtractProperty(
+            name="millenial_or_boomer", 
+            description="A prediction of whether this email was written by a millenial or boomer",
+            type="string",
+            enum=["millenial", "boomer"],
+            required=True
+        ),
+        ExtractProperty(
+            name="as_gen_z", 
+            description="The email rewritten and summarized as if it were from a a Gen Z person",
+            type="string",
+            required=True
+        )
+    ]
+    document = await doctran.extract(document=document, properties=properties)
+    print("\nEmail Subject: " + parsed_email.get('subject'))
+    print("Email Body: " + parsed_email.get('text')[0][2][:250] + "...")
+    print("\n👴 Written by boomer or millenial:\n" + '\033[1m' + json.dumps(document.extracted_properties["millenial_or_boomer"], ensure_ascii=False) + '\033[0m')
+    print("\n✨ Rewritten as Gen Z:\n" + '\033[1m' + json.dumps(document.extracted_properties["as_gen_z"], ensure_ascii=False) + '\033[0m')
+
 async def run():
-    mbox_obj = mailbox.mbox('/home/meryem/Téléchargements/TakeoutMails/messages.mbox')
+    mbox_obj = mailbox.mbox('/Users/jasonfan/Documents/code/Takeout/Mail/All mail Including Spam and Trash.mbox')
 
     num_entries = len(mbox_obj)
     print("Loaded {num_entries} entries from mbox file".format(num_entries=num_entries))
 
-    doctran = Doctran(openai_api_key=os.environ['OPENAI_API_KEY'], openai_model="gpt-3.5-turbo-16k-0613")
+    doctran = Doctran(openai_api_key=os.environ['OPENAI_API_KEY'], openai_model="gpt-4-0613")
 
     for i in range(700, 710):
         email_obj = mbox_obj[i]
@@ -88,36 +110,12 @@ async def run():
         # Approximate check to ensure we're not sending emails > 8000 tokens
         if len(str(parsed_email)) > 25000:
             continue
-        # print("Parsing email {} of {}".format(i, num_entries))
-        # Extract parameters
         document = doctran.parse(content=str(parsed_email), content_type="text")
-        # print("")
-        # print(document)
-        properties = [
-            ExtractProperty(
-                name="millenial_or_boomer", 
-                description="A prediction of whether this email was written by a millenial or boomer",
-                type="string",
-                enum=["millenial", "boomer"],
-                required=True
-            ),
-            ExtractProperty(
-                name="as_gen_z", 
-                description="The email rewritten and summarized as if it were from a a Gen Z person",
-                type="string",
-                required=True
-            )
-        ]
-        document = await doctran.extract(document=document, properties=properties)
 
-        # Check if email is str or bytes, if bytes decode to str
-        email_body = parsed_email.get('text')[0][2]
-        if isinstance(email_body, bytes):
-            email_body = email_body.decode('utf-8')
+        # Extract parameters
+        # await test_extract(doctran=doctran, document=document, parsed_email=parsed_email)
 
-        print("\nEmail Subject: " + parsed_email.get('subject'))
-        print("Email Body: " + email_body[:250] + "...")
-        print("\n👴 Written by boomer or millenial:\n" + '\033[1m' + json.dumps(document.extracted_properties["millenial_or_boomer"], ensure_ascii=False) + '\033[0m')
-        print("\n✨ Rewritten as Gen Z:\n" + '\033[1m' + json.dumps(document.extracted_properties["as_gen_z"], ensure_ascii=False) + '\033[0m')
+        # Redact PII
+        document = await doctran.redact(document=document, entities=["PERSON", "EMAIL_ADDRESS"])
 
 asyncio.run(run())

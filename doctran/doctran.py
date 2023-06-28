@@ -139,18 +139,15 @@ class Doctran:
             "properties": {},
             "required": [],
         }
-        try:
-            for prop in properties:
-                function_parameters["properties"][prop.name] = {
-                    "type": prop.type,
-                    "description": prop.description,
-                    **({"items": prop.items} if prop.items else {}),
-                    **({"enum": prop.enum} if prop.enum else {}),
-                }
-                if prop.required:
-                    function_parameters["required"].append(prop.name)
-        except Exception as e:
-            raise Exception(f"Invalid properties provided: {e}")
+        for prop in properties:
+            function_parameters["properties"][prop.name] = {
+                "type": prop.type,
+                "description": prop.description,
+                **({"items": prop.items} if prop.items else {}),
+                **({"enum": prop.enum} if prop.enum else {}),
+            }
+            if prop.required:
+                function_parameters["required"].append(prop.name)
 
         try:
             function_call = OpenAIFunctionCall(
@@ -166,7 +163,10 @@ class Doctran:
             # pdb.set_trace()
             completion = self.openai.ChatCompletion.create(**function_call.dict())
             arguments = completion.choices[0].message["function_call"]["arguments"]
-            document.extracted_properties = json.loads(arguments)
+            try:
+                document.extracted_properties = json.loads(arguments)
+            except Exception as e:
+                raise Exception(f"OpenAI returned malformatted json: {e} {arguments}")
             return document
         except Exception as e:
             raise Exception(f"OpenAI function call failed: {e}")
