@@ -3,6 +3,9 @@ import json
 import openai
 import uuid
 from enum import Enum
+import spacy
+from presidio_analyzer import AnalyzerEngine
+from presidio_anonymizer import AnonymizerEngine
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel
 import requests
@@ -88,6 +91,20 @@ class ExtractProperty(BaseModel):
     enum: Optional[List[str]]
     required: bool = True
 
+class DenoiseProperty(BaseModel):
+    name: str
+    description: str
+    type: Literal["string", "number", "boolean", "array", "object"]
+    properties: Optional[List | Dict[str, Any]]
+    required: bool = True
+
+class TranslateProperty(BaseModel):
+    name: str
+    description: str
+    type: Literal["string", "number", "boolean", "array", "object"]
+    properties: Optional[List | Dict[str, Any]]
+    required: bool = True
+
 class Doctran:
     def __init__(self, openai_api_key: str, openai_model: str = "gpt-3.5-turbo-0613"):
         self.openai_api_key = openai_api_key
@@ -158,15 +175,54 @@ class Doctran:
     def compress(self, *, document: Document, token_limit: int) -> Document:
         pass
     
-    # TODO: Use OpenAI function call to remove irrelevant information from a document
-    def denoise(self, *, document: Document, topics: List[str]) -> Document:
-        pass
+    async def denoise(self, *, document: Document, property: DenoiseProperty) -> Document:
+        '''
+        Use OpenAI function calling to remove irrelevant information from the document.
+
+        Returns:
+        Document: the denoised content represented as a Doctran Document
+        '''
+
+        function_parameters = {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        }
+
+        function_parameters["properties"][property.name] = {
+            "type": property.type,
+            "description": property.description,
+            "properties": property.properties
+        }
+        if property.required:
+            function_parameters["required"].append(property.name)
+
+        try:
+            function_call = OpenAIFunctionCall(
+                model=self.openai_model, 
+                messages=[{"role": "user", "content": document.transformed_content}], 
+                functions=[{
+                    "name": "denoise_information",
+                    "description": "Re-write raw text but exclude all information that's not relevant",
+                    "parameters": function_parameters,
+                }],
+                function_call={"name": "denoise_information"}
+            )
+
+            completion = self.openai.ChatCompletion.create(**function_call.dict())
+            arguments = completion.choices[0].message["function_call"]["arguments"]
+            arguments_dict = json.loads(arguments)
+            document.transformed_content = arguments_dict["only_relevant_data"]
+            return document
+        except Exception as e:
+            raise Exception(f"OpenAI function call failed: {e}")
+
     
     # TODO: Use OpenAI function call to convert documents to question and answer format
     def interrogate(self, *, document: Document) -> List[dict[str, str]]:
         pass
     
-    # TODO: Use presidio or similar libraries to redact sensitive information. Cannot use a hosted 3rd party
+    # TODO: Evaluate other libraries rather than presidio
     # service for this because of privacy concerns.
     def redact(self, *, document: Document, entities: List[RecognizerEntity | str] = None) -> Document:
         '''
@@ -175,27 +231,24 @@ class Doctran:
         Returns:
             document: the document with content redacted from document.transformed_content
         '''
-        for entity, i in entities:
+
+        for i, entity in enumerate(entities):
             if entity in RecognizerEntity.__members__:
-                entities[i] = RecognizerEntity[entity]
-            elif entity not in RecognizerEntity.__members__.values():
+                entities[i] = RecognizerEntity[entity].value
+            else:
                 raise Exception(f"Invalid entity type: {entity}")
 
-        import spacy
-        from presidio_analyzer import AnalyzerEngine
-        from presidio_anonymizer import AnonymizerEngine
-
         try:
-            spacy.load("en_core_web_lg")
+            spacy.load("en_core_web_md")
         except OSError:
             while True:
-                response = input("en_core_web_lg model not found, but is required to run presidio-anonymizer. Download it now? (Y/n)")
+                response = input("en_core_web_md model not found, but is required to run presidio-anonymizer. Download it now? (Y/n)")
                 if response.lower() in ["n", "no"]:
-                    raise Exception("Cannot run presidio-anonymizer without en_core_web_lg model.")
+                    raise Exception("Cannot run presidio-anonymizer without en_core_web_md model.")
                 elif response.lower() in ["y", "yes", ""]:
                     print("Downloading...")
                     from spacy.cli.download import download
-                    download(model="en_core_web_lg")
+                    download(model="en_core_web_md")
                     break
                 else:
                     print("Invalid response.")
@@ -203,13 +256,55 @@ class Doctran:
         analyzer = AnalyzerEngine()
         anonymizer = AnonymizerEngine()
         results = analyzer.analyze(text=text,
-                                   entities=[entity.value for entity in entities] if entities else None,
+                                   entities=entities if entities else None,
                                    language='en')
-        anonymized_text = anonymizer.anonymize(text=text, analyzer_results=results)
-        print(anonymized_text)
-        document.transformed_content = str(anonymized_text)
+        anonymized_data = anonymizer.anonymize(text=text, analyzer_results=results)
 
+        # Extract just the text without the verbose part
+        text_section = str(anonymized_data).split("\nitems:\n")
+        anonymized_text = text_section[0].strip().removeprefix("text: ")
 
-    # TODO: Use OpenAI function call to translate this document to another language
-    def translate(self, *, document: Document, language: str) -> Document:
-        pass
+        document.transformed_content = anonymized_text
+        return document
+
+    async def translate(self, *, document: Document, property: TranslateProperty) -> Document:
+        '''
+        Use OpenAI function calling to translate the document to another language.
+
+        Returns:
+        Document: the translated document represented as a Doctran Document
+        '''
+
+        function_parameters = {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        }
+
+        function_parameters["properties"][property.name] = {
+            "type": property.type,
+            "description": property.description,
+            "properties": property.properties
+        }
+        if property.required:
+            function_parameters["required"].append(property.name)
+
+        try:
+            function_call = OpenAIFunctionCall(
+                model=self.openai_model, 
+                messages=[{"role": "user", "content": document.transformed_content}], 
+                functions=[{
+                    "name": "translate_text",
+                    "description": "Re-write the whole text content in an other language",
+                    "parameters": function_parameters,
+                }],
+                function_call={"name": "translate_text"}
+            )
+
+            completion = self.openai.ChatCompletion.create(**function_call.dict())
+            arguments = completion.choices[0].message["function_call"]["arguments"]
+            arguments_dict = json.loads(arguments)
+            document.transformed_content = arguments_dict["translated_text"]
+            return document
+        except Exception as e:
+            raise Exception(f"OpenAI function call failed: {e}")
