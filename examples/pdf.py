@@ -5,7 +5,7 @@ import io
 import pdfplumber
 import requests
 from doctran import Doctran, Document
-from doctran.doctran import DenoiseProperty, TranslateProperty
+from doctran.doctran import DenoiseProperty, InterrogationProperty, TranslateProperty
 
 ## Test with pdf file
 
@@ -41,34 +41,36 @@ async def run():
 
     # Create Doctran Document
     document = doctran.parse(content=pdf_text, content_type="text")
-
-    property = DenoiseProperty(
-            name="only_relevant_data", 
-            description="Only include text related to the given relevant topics",
-            type="string",
-            properties={
-                "Investment": {
-                    "type": "string",
-                    "description": "A relevant topic in this text",
-                },
-                "Acquisitions": {
-                    "type": "string",
-                    "description": "A relevant topic in this text",
-                },
-            },
-            required=True
-    )
     
-    # Denoise document 
+    #"""""""""""""""""""""""""""""" Denoise document """"""""""""""""""""""""""""""
+    # property = DenoiseProperty(
+    #     name="only_relevant_data", 
+    #     description="Only include text related to the given relevant topics",
+    #     type="string",
+    #     properties={
+    #         "Investment": {
+    #             "type": "string",
+    #             "description": "A relevant topic in this text",
+    #         },
+    #         "Acquisitions": {
+    #             "type": "string",
+    #             "description": "A relevant topic in this text",
+    #         },
+    #     },
+    #     required=True
+    # )
     # document = await doctran.denoise(document=document, property=property)
     # print("\nDocument Content: " + pdf_text[:250] + "...")
     # print(f"\n👴 Denoised Content:\n \033[1m {document.transformed_content} \033[0m")
 
-    # Redact PII
+
+    #"""""""""""""""""""""""""""""" Redact PII """""""""""""""""""""""""""""""""""
     # document = doctran.redact(document=document, entities=["PERSON", "LOCATION"])
     # print("\nDocument Content: " + pdf_text[:250] + "...")
     # print(f"\n👴 Anonymized Content:\n \033[1m {document.transformed_content} \033[0m")
 
+
+    #"""""""""""""""""""""""""""""" Translate document """"""""""""""""""""""""""""""
     property = TranslateProperty(
         name="translated_text", 
         description="Translate text to the given language",
@@ -85,6 +87,5 @@ async def run():
     document = await doctran.translate(document=document, property=property)
     print("\nDocument Content: " + pdf_text[:250] + "...")
     print(f"\n👴 Translated Content:\n \033[1m {document.transformed_content} \033[0m")
-
 
 asyncio.run(run())
