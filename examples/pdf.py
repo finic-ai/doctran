@@ -59,10 +59,15 @@ async def run():
             required=True
         )
     
-    
-    document = await doctran.denoise(document=document, property=property)
+    # Denoise document 
+    # document = await doctran.denoise(document=document, property=property)
+    # print("\nDocument Content: " + pdf_text[:250] + "...")
+    # print(f"\n👴 Denoised Content:\n \033[1m {document.transformed_content} \033[0m")
 
+    # Redact PII
+    document = doctran.redact(document=document, entities=["PERSON", "LOCATION"])
     print("\nDocument Content: " + pdf_text[:250] + "...")
-    print(f"\n👴 Denoised Content:\n \033[1m {document.transformed_content} \033[0m")
+    print(f"\n👴 Anonymized Content:\n \033[1m {document.transformed_content} \033[0m")
+
 
 asyncio.run(run())

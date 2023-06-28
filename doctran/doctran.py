@@ -3,6 +3,9 @@ import json
 import openai
 import uuid
 from enum import Enum
+import spacy
+from presidio_analyzer import AnalyzerEngine
+from presidio_anonymizer import AnonymizerEngine
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel
 import requests
@@ -24,6 +27,38 @@ class Transformation(Enum):
     redact = "redact"
     translate = "translate"
 
+# Not easily retrievalble from the presidio library so it should be kept up to date manually based on
+# https://microsoft.github.io/presidio/supported_entities/
+class RecognizerEntity(Enum):
+    CREDIT_CARD = "CREDIT_CARD"
+    CRYPTO = "CRYPTO"
+    DATE_TIME = "DATE_TIME"
+    EMAIL_ADDRESS = "EMAIL_ADDRESS"
+    IBAN_CODE = "IBAN_CODE"
+    IP_ADDRESS = "IP_ADDRESS"
+    NRP = "NRP"
+    PHONE_NUMBER = "PHONE_NUMBER"
+    URL = "URL"
+    LOCATION = "LOCATION"
+    PERSON = "PERSON"
+    MEDICAL_LICENSE = "MEDICAL_LICENSE"
+    US_BANK_NUMBER = "US_BANK_NUMBER"
+    US_DRIVER_LICENSE = "US_DRIVER_LICENSE"
+    US_ITIN = "US_ITIN"
+    US_PASSPORT = "US_PASSPORT"
+    US_SSN = "US_SSN"
+    UK_NHS = "UK_NHS"
+    ES_NIF = "ES_NIF"
+    IT_FISCAL_CODE = "IT_FISCAL_CODE"
+    IT_DRIVER_LICENSE = "IT_DRIVER_LICENSE"
+    IT_VAT_CODE = "IT_VAT_CODE"
+    IT_PASSPORT = "IT_PASSPORT"
+    IT_IDENTITY_CARD = "IT_IDENTITY_CARD"
+    SG_NRIC_FIN = "SG_NRIC_FIN"
+    AU_ABN = "AU_ABN"
+    AU_ACN = "AU_ACN"
+    AU_TFN = "AU_TFN"
+    AU_MEDICARE_NUMBER = "AU_MEDICARE_NUMBER"
 
 class Document(BaseModel):
     uri: str
@@ -180,10 +215,50 @@ class Doctran:
     def interrogate(self, *, document: Document) -> List[dict[str, str]]:
         pass
     
-    # TODO: Use presidio or similar libraries to redact sensitive information. Cannot use a hosted 3rd party
+    # TODO: Evaluate other libraries rather than presidio
     # service for this because of privacy concerns.
-    def redact(self, *, document: Document) -> Document:
-        pass
+    def redact(self, *, document: Document, entities: List[RecognizerEntity | str] = None) -> Document:
+        '''
+        Use presidio to redact sensitive information from the document.
+
+        Returns:
+            document: the document with content redacted from document.transformed_content
+        '''
+
+        for i, entity in enumerate(entities):
+            if entity in RecognizerEntity.__members__:
+                entities[i] = RecognizerEntity[entity].value
+            else:
+                raise Exception(f"Invalid entity type: {entity}")
+
+        try:
+            spacy.load("en_core_web_md")
+        except OSError:
+            while True:
+                response = input("en_core_web_md model not found, but is required to run presidio-anonymizer. Download it now? (Y/n)")
+                if response.lower() in ["n", "no"]:
+                    raise Exception("Cannot run presidio-anonymizer without en_core_web_md model.")
+                elif response.lower() in ["y", "yes", ""]:
+                    print("Downloading...")
+                    from spacy.cli.download import download
+                    download(model="en_core_web_md")
+                    break
+                else:
+                    print("Invalid response.")
+        text = document.transformed_content
+        analyzer = AnalyzerEngine()
+        anonymizer = AnonymizerEngine()
+        results = analyzer.analyze(text=text,
+                                   entities=entities if entities else None,
+                                   language='en')
+        anonymized_data = anonymizer.anonymize(text=text, analyzer_results=results)
+
+        # Extract just the text without the verbose part
+        text_section = str(anonymized_data).split("\nitems:\n")
+        anonymized_text = text_section[0].strip().removeprefix("text: ")
+
+        document.transformed_content = anonymized_text
+        return document
 
     # TODO: Use OpenAI function call to translate this document to another language
     def translate(self, *, document: Document, language: str) -> Document:
