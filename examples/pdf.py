@@ -5,7 +5,7 @@ import io
 import pdfplumber
 import requests
 from doctran import Doctran, Document
-from doctran.doctran import DenoiseProperty
+from doctran.doctran import DenoiseProperty, TranslateProperty
 
 ## Test with pdf file
 
@@ -57,7 +57,7 @@ async def run():
                 },
             },
             required=True
-        )
+    )
     
     # Denoise document 
     # document = await doctran.denoise(document=document, property=property)
@@ -65,9 +65,26 @@ async def run():
     # print(f"\n👴 Denoised Content:\n \033[1m {document.transformed_content} \033[0m")
 
     # Redact PII
-    document = doctran.redact(document=document, entities=["PERSON", "LOCATION"])
+    # document = doctran.redact(document=document, entities=["PERSON", "LOCATION"])
+    # print("\nDocument Content: " + pdf_text[:250] + "...")
+    # print(f"\n👴 Anonymized Content:\n \033[1m {document.transformed_content} \033[0m")
+
+    property = TranslateProperty(
+        name="translated_text", 
+        description="Translate text to the given language",
+        type="string",
+        properties={
+            "French": {
+                "type": "string",
+                "description": "Language",
+            }
+        },
+        required=True
+    )
+
+    document = await doctran.translate(document=document, property=property)
     print("\nDocument Content: " + pdf_text[:250] + "...")
-    print(f"\n👴 Anonymized Content:\n \033[1m {document.transformed_content} \033[0m")
+    print(f"\n👴 Translated Content:\n \033[1m {document.transformed_content} \033[0m")
 
 
 asyncio.run(run())

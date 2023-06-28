@@ -98,6 +98,13 @@ class DenoiseProperty(BaseModel):
     properties: Optional[List | Dict[str, Any]]
     required: bool = True
 
+class TranslateProperty(BaseModel):
+    name: str
+    description: str
+    type: Literal["string", "number", "boolean", "array", "object"]
+    properties: Optional[List | Dict[str, Any]]
+    required: bool = True
+
 class Doctran:
     def __init__(self, openai_api_key: str, openai_model: str = "gpt-3.5-turbo-0613"):
         self.openai_api_key = openai_api_key
@@ -260,10 +267,44 @@ class Doctran:
         document.transformed_content = anonymized_text
         return document
 
-    # TODO: Use OpenAI function call to translate this document to another language
-    def translate(self, *, document: Document, language: str) -> Document:
-        pass
+    async def translate(self, *, document: Document, property: TranslateProperty) -> Document:
+        '''
+        Use OpenAI function calling to translate the document to another language.
 
-    # TODO: Use OpenAI function call to summarize this document
-    def summarize(self, *, document: Document) -> Document:
-        pass
+        Returns:
+        Document: the translated document represented as a Doctran Document
+        '''
+
+        function_parameters = {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        }
+
+        function_parameters["properties"][property.name] = {
+            "type": property.type,
+            "description": property.description,
+            "properties": property.properties
+        }
+        if property.required:
+            function_parameters["required"].append(property.name)
+
+        try:
+            function_call = OpenAIFunctionCall(
+                model=self.openai_model, 
+                messages=[{"role": "user", "content": document.transformed_content}], 
+                functions=[{
+                    "name": "translate_text",
+                    "description": "Re-write the whole text content in an other language",
+                    "parameters": function_parameters,
+                }],
+                function_call={"name": "translate_text"}
+            )
+
+            completion = self.openai.ChatCompletion.create(**function_call.dict())
+            arguments = completion.choices[0].message["function_call"]["arguments"]
+            arguments_dict = json.loads(arguments)
+            document.transformed_content = arguments_dict["translated_text"]
+            return document
+        except Exception as e:
+            raise Exception(f"OpenAI function call failed: {e}")
