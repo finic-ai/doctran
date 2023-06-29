@@ -3,7 +3,7 @@
 </h2>
 
 <p align="center">
-  <p align="center">Document transformation framework for language models</p>
+  <p align="center"><b>Doc</b>ument <b>tran</b>sformation framework for retrieval-augmented generation</p>
 </p>
 <p align="center">
 <a href="https://join.slack.com/t/psychicapi/shared_invite/zt-1ty1wz6w0-8jkmdvBpM5kj_Fh30EiCcg" target="_blank">
@@ -21,4 +21,4 @@
 </a>
 </p>
 
-Doctran is an open source framework for applying transformations to unstructured text using LLMs and classical NLP, with the goal of improving information density. This is useful for applications that rely on ANN search to retrieve relevant context for LLM-based assistants like chatbots and agents, where sparse information in source documents results in poor recall.
+Using ANN search to retrieve context for LLM-driven applications like chatbots and agents is standard practice, but suffers from low recall when embeddings are generated from documents with sparse information and noisy text. Doctran is an open-source platform that users LLMs and classical NLP techniques to transform unstructured text and increase information density.
