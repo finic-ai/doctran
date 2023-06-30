@@ -120,7 +120,7 @@ async def run():
         # print(document.transformed_content)
 
         # Compress context
-        document = doctran.compress(document=document, token_limit=100)
+        document = await document.compress(token_limit=100).redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).execute()
         print(document.transformed_content)
 
 asyncio.run(run())

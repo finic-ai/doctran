@@ -1,5 +1,5 @@
 import os
-import json
+import importlib
 import openai
 import uuid
 from enum import Enum
@@ -10,57 +10,9 @@ from presidio_anonymizer import AnonymizerEngine
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel
 import requests
-import tiktoken
-from prompts import COMPRESS_PROMPT
+from doctran.models import ContentType, DoctranConfig, Transformation, ExtractProperty, DenoiseProperty, TranslateProperty, RecognizerEntity
 
 import pdb
-
-class ContentType(Enum):
-    text = "text"
-    html = "html"
-    pdf = "pdf"
-    mbox = "mbox"
-
-class Transformation(Enum):
-    compress = "compress"
-    denoise = "denoise"
-    extract = "extract"
-    interrogate = "interrogate"
-    redact = "redact"
-    translate = "translate"
-
-# Not easily retrievalble from the presidio library so it should be kept up to date manually based on
-# https://microsoft.github.io/presidio/supported_entities/
-class RecognizerEntity(Enum):
-    CREDIT_CARD = "CREDIT_CARD"
-    CRYPTO = "CRYPTO"
-    DATE_TIME = "DATE_TIME"
-    EMAIL_ADDRESS = "EMAIL_ADDRESS"
-    IBAN_CODE = "IBAN_CODE"
-    IP_ADDRESS = "IP_ADDRESS"
-    NRP = "NRP"
-    PHONE_NUMBER = "PHONE_NUMBER"
-    URL = "URL"
-    LOCATION = "LOCATION"
-    PERSON = "PERSON"
-    MEDICAL_LICENSE = "MEDICAL_LICENSE"
-    US_BANK_NUMBER = "US_BANK_NUMBER"
-    US_DRIVER_LICENSE = "US_DRIVER_LICENSE"
-    US_ITIN = "US_ITIN"
-    US_PASSPORT = "US_PASSPORT"
-    US_SSN = "US_SSN"
-    UK_NHS = "UK_NHS"
-    ES_NIF = "ES_NIF"
-    IT_FISCAL_CODE = "IT_FISCAL_CODE"
-    IT_DRIVER_LICENSE = "IT_DRIVER_LICENSE"
-    IT_VAT_CODE = "IT_VAT_CODE"
-    IT_PASSPORT = "IT_PASSPORT"
-    IT_IDENTITY_CARD = "IT_IDENTITY_CARD"
-    SG_NRIC_FIN = "SG_NRIC_FIN"
-    AU_ABN = "AU_ABN"
-    AU_ACN = "AU_ACN"
-    AU_TFN = "AU_TFN"
-    AU_MEDICARE_NUMBER = "AU_MEDICARE_NUMBER"
 
 class Document(BaseModel):
     uri: str
@@ -68,56 +20,98 @@ class Document(BaseModel):
     content_type: ContentType
     raw_content: str
     transformed_content: str
-    interrogation: Optional[Dict[str, Any]] = None
+    config: DoctranConfig
+    transformation_builder: 'DocumentTransformationBuilder' = None
     extracted_properties: Optional[Dict[str, Any]] = None
-    applied_transformations: Optional[List[Transformation]] = None
+    applied_transformations: Optional[List[Transformation]] = []
     metadata: Optional[Dict[str, Any]] = None
 
-    def get_token_size(self):
+    def extract(self, *, properties: List[ExtractProperty]) -> 'DocumentTransformationBuilder':
+        if not self.transformation_builder:
+            self.transformation_builder = DocumentTransformationBuilder(self)
+        self.transformation_builder.extract(properties=properties)
+        return self.transformation_builder
+    
+    def compress(self, token_limit: int) -> 'DocumentTransformationBuilder':
+        if not self.transformation_builder:
+            self.transformation_builder = DocumentTransformationBuilder(self)
+        self.transformation_builder.compress(token_limit=token_limit)
+        return self.transformation_builder
+
+    def redact(self, *, entities: List[RecognizerEntity | str]) -> 'DocumentTransformationBuilder':
+        if not self.transformation_builder:
+            self.transformation_builder = DocumentTransformationBuilder(self)
+        self.transformation_builder.redact(entities=entities)
+        return self.transformation_builder
+
+    def denoise(self) -> 'DocumentTransformationBuilder':
         pass
 
-    def get_char_size(self):
+    def translate(self) -> 'DocumentTransformationBuilder':
         pass
 
-class OpenAIChatCompletionCall(BaseModel):
-    model: str = "gpt-3.5-turbo-0613"
-    messages: List[Dict[str, str]]
-    temperature: int = 0
-    max_tokens: Optional[int] = None
+    def interrogate(self) -> 'DocumentTransformationBuilder':
+        pass
 
-class OpenAIFunctionCall(OpenAIChatCompletionCall):
-    functions: List[Dict[str, Any]]
-    function_call: str | Dict[str, Any]
+class DocumentTransformationBuilder:
+    '''
+    A builder for Document transformations to enable chaining of transformations.
+    '''
+    def __init__(self, document: Document) -> None:
+        self.document = document
+        self.transformations = []
+    
+    async def execute(self) -> Document:
+        module_name = "doctran.transformers"
+        module = importlib.import_module(module_name)
+        try:
+            for transformation in self.transformations:
+                transformer = getattr(module, transformation[0].value)(config=self.document.config, **transformation[1])
+                self.document = await transformer.transform(self.document)
+                self.document.applied_transformations.append(transformation[0])
+            return self.document
+        except Exception as e:
+            raise Exception(f"Error executing transformation {transformation}: {e}")
 
-class ExtractProperty(BaseModel):
-    name: str
-    description: str
-    type: Literal["string", "number", "boolean", "array", "object"]
-    items: Optional[List | Dict[str, Any]]
-    enum: Optional[List[str]]
-    required: bool = True
+    def extract(self, *, properties: List[ExtractProperty]) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.extract, {"properties": properties}))
+        return self
 
-class DenoiseProperty(BaseModel):
-    name: str
-    description: str
-    type: Literal["string", "number", "boolean", "array", "object"]
-    properties: Optional[List | Dict[str, Any]]
-    required: bool = True
+    def compress(self, token_limit: int) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.compress, {"token_limit": token_limit}))
+        return self
 
-class TranslateProperty(BaseModel):
-    name: str
-    description: str
-    type: Literal["string", "number", "boolean", "array", "object"]
-    properties: Optional[List | Dict[str, Any]]
-    required: bool = True
+    def redact(self, *, entities: List[RecognizerEntity | str]) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.redact, {"entities": entities}))
+        return self
+
+    def denoise(self) -> 'DocumentTransformationBuilder':
+        self.transformations.append(Transformation.denoise)
+        return self
+
+    def translate(self) -> 'DocumentTransformationBuilder':
+        self.transformations.append(Transformation.translate)
+        return self
+
+    def interrogate(self) -> 'DocumentTransformationBuilder':
+        self.transformations.append(Transformation.interrogate)
+        return self
+
 
 class Doctran:
-    def __init__(self, openai_api_key: str, openai_model: str = "gpt-3.5-turbo-0613"):
-        self.openai_api_key = openai_api_key
-        self.openai_completions_url = "https://api.openai.com/v1/completions"
-        self.openai_model = openai_model
-        self.openai = openai
-        self.openai.api_key = os.environ["OPENAI_API_KEY"]
+    def __init__(self, openai_api_key: str = None, openai_model: str = "gpt-3.5-turbo-0613"):
+        self.config = DoctranConfig(
+            openai_api_key=openai_api_key,
+            openai_model=openai_model,
+            openai_completions_url="https://api.openai.com/v1/completions",
+            openai=openai
+        )
+        if openai_api_key:
+            self.config.openai.api_key = openai_api_key
+        elif os.environ["OPENAI_API_KEY"]:
+            self.config.openai.api_key = os.environ["OPENAI_API_KEY"]
+        else:
+            raise Exception("No OpenAI API Key provided")
 
     def parse(self, *, content: str, content_type: ContentType, uri: str = None, metadata: dict = None) -> Document:
         '''
@@ -129,240 +123,97 @@ class Doctran:
         if not uri:
             uri = str(uuid.uuid4())
         if content_type == ContentType.text.value:
-            # TODO: Recursively chunk the document
-            document = Document(id=str(uuid.uuid4()), content_type=content_type, raw_content=content, transformed_content=content, uri=uri, metadata=metadata)
+            # TODO: Optional chunking for documents that are too large
+            document = Document(id=str(uuid.uuid4()), content_type=content_type, raw_content=content, transformed_content=content, config=self.config, uri=uri, metadata=metadata)
             return document
-
-    async def extract(self, *, document: Document, properties: List[ExtractProperty]) -> Document:
-        '''
-        Use OpenAI function calling to extract structured data from the document.
-
-        Returns:
-            document: the original document, with the extracted properties added to the extracted_properties field
-        '''
-        function_parameters = {
-            "type": "object",
-            "properties": {},
-            "required": [],
-        }
-        for prop in properties:
-            function_parameters["properties"][prop.name] = {
-                "type": prop.type,
-                "description": prop.description,
-                **({"items": prop.items} if prop.items else {}),
-                **({"enum": prop.enum} if prop.enum else {}),
-            }
-            if prop.required:
-                function_parameters["required"].append(prop.name)
-
-        try:
-            function_call = OpenAIFunctionCall(
-                model=self.openai_model, 
-                temperature=0,
-                messages=[{"role": "user", "content": document.transformed_content}], 
-                functions=[{
-                    "name": "extract_information",
-                    "description": "Extract structured data from a raw text document.",
-                    "parameters": function_parameters,
-                }],
-                function_call={"name": "extract_information"}
-            )
-            # pdb.set_trace()
-            completion = self.openai.ChatCompletion.create(**function_call.dict())
-            arguments = completion.choices[0].message["function_call"]["arguments"]
-            try:
-                document.extracted_properties = json.loads(arguments)
-            except Exception as e:
-                raise Exception(f"OpenAI returned malformatted json: {e} {arguments}")
-            return document
-        except Exception as e:
-            raise Exception(f"OpenAI function call failed: {e}")
-
-    # TODO: Use OpenAI function call to compress a document to under a certain token limit
-    def compress(self, *, document: Document, token_limit: int) -> Document:
-        '''
-        Use OpenAI function calling to summarize the document to under a certain token limit.
-
-        Returns:
-            document: the original document, with the compressed content added to the transformed_content field
-        '''
-        function_parameters = {
-            "type": "object",
-            "properties": {
-                "summary": {
-                    "type": "string",
-                    "description": "The summary of the document.",
-                }
-            },
-            "required": ["summary"],
-        }
-
-        encoding = tiktoken.encoding_for_model(self.openai_model)
-        content_token_size = len(encoding.encode(document.transformed_content))
-        if content_token_size + token_limit > 4000:
-            raise Exception(f"Cannot compress document to {token_limit} tokens, as the document already takes up {content_token_size} tokens.")
-        try:
-            function_call = OpenAIFunctionCall(
-                model=self.openai_model, 
-                max_tokens=token_limit + 100,
-                temperature=0,
-                messages=[
-                    {"role": "user", "content": document.transformed_content}
-                ], 
-                functions=[{
-                    "name": "summarize",
-                    "description": f"Summarize the document in under {token_limit} tokens.",
-                    "parameters": function_parameters,
-                }],
-                function_call={"name": "summarize"}
-            )
-            completion = self.openai.ChatCompletion.create(**function_call.dict())
-            arguments = completion.choices[0].message["function_call"]["arguments"]
-            try:
-                # TODO: retry if the summary is longer than the token limit
-                document.transformed_content = json.loads(arguments).get("summary")
-            except Exception as e:
-                raise Exception("OpenAI returned malformatted JSON" +
-                                "This is likely due to the completion running out of tokens. " +
-                                f"Setting a higher token limit may fix this error. JSON returned: {arguments}")
-            return document
-        except Exception as e:
-            raise Exception(f"OpenAI function call failed: {e}")
     
     async def denoise(self, *, document: Document, property: DenoiseProperty) -> Document:
-        '''
-        Use OpenAI function calling to remove irrelevant information from the document.
+        # '''
+        # Use OpenAI function calling to remove irrelevant information from the document.
 
-        Returns:
-        Document: the denoised content represented as a Doctran Document
-        '''
+        # Returns:
+        # Document: the denoised content represented as a Doctran Document
+        # '''
 
-        function_parameters = {
-            "type": "object",
-            "properties": {},
-            "required": [],
-        }
+        # function_parameters = {
+        #     "type": "object",
+        #     "properties": {},
+        #     "required": [],
+        # }
 
-        function_parameters["properties"][property.name] = {
-            "type": property.type,
-            "description": property.description,
-            "properties": property.properties
-        }
-        if property.required:
-            function_parameters["required"].append(property.name)
+        # function_parameters["properties"][property.name] = {
+        #     "type": property.type,
+        #     "description": property.description,
+        #     "properties": property.properties
+        # }
+        # if property.required:
+        #     function_parameters["required"].append(property.name)
 
-        try:
-            function_call = OpenAIFunctionCall(
-                model=self.openai_model, 
-                messages=[{"role": "user", "content": document.transformed_content}], 
-                functions=[{
-                    "name": "denoise_information",
-                    "description": "Re-write raw text but exclude all information that's not relevant",
-                    "parameters": function_parameters,
-                }],
-                function_call={"name": "denoise_information"}
-            )
+        # try:
+        #     function_call = OpenAIFunctionCall(
+        #         model=self.openai_model, 
+        #         messages=[{"role": "user", "content": document.transformed_content}], 
+        #         functions=[{
+        #             "name": "denoise_information",
+        #             "description": "Re-write raw text but exclude all information that's not relevant",
+        #             "parameters": function_parameters,
+        #         }],
+        #         function_call={"name": "denoise_information"}
+        #     )
 
-            completion = self.openai.ChatCompletion.create(**function_call.dict())
-            arguments = completion.choices[0].message["function_call"]["arguments"]
-            arguments_dict = json.loads(arguments)
-            document.transformed_content = arguments_dict["only_relevant_data"]
-            return document
-        except Exception as e:
-            raise Exception(f"OpenAI function call failed: {e}")
+        #     completion = self.openai.ChatCompletion.create(**function_call.dict())
+        #     arguments = completion.choices[0].message["function_call"]["arguments"]
+        #     arguments_dict = json.loads(arguments)
+        #     document.transformed_content = arguments_dict["only_relevant_data"]
+        #     return document
+        # except Exception as e:
+        #     raise Exception(f"OpenAI function call failed: {e}")
+        pass
 
     
     # TODO: Use OpenAI function call to convert documents to question and answer format
     def interrogate(self, *, document: Document) -> List[dict[str, str]]:
         pass
-    
-    # TODO: Evaluate other libraries rather than presidio
-    # service for this because of privacy concerns.
-    def redact(self, *, document: Document, entities: List[RecognizerEntity | str] = None) -> Document:
-        '''
-        Use presidio to redact sensitive information from the document.
-
-        Returns:
-            document: the document with content redacted from document.transformed_content
-        '''
-        # Entities can be provided as either a string or enum, so convert to string in a all cases
-        for i, entity in enumerate(entities):
-            if entity in RecognizerEntity.__members__:
-                entities[i] = RecognizerEntity[entity].value
-            else:
-                raise Exception(f"Invalid entity type: {entity}")
-
-        try:
-            spacy.load("en_core_web_md")
-        except OSError:
-            while True:
-                response = input("en_core_web_md model not found, but is required to run presidio-anonymizer. Download it now? (~40MB) (Y/n)")
-                if response.lower() in ["n", "no"]:
-                    raise Exception("Cannot run presidio-anonymizer without en_core_web_md model.")
-                elif response.lower() in ["y", "yes", ""]:
-                    print("Downloading...")
-                    from spacy.cli.download import download
-                    download(model="en_core_web_md")
-                    break
-                else:
-                    print("Invalid response.")
-        text = document.transformed_content
-        nlp_engine_provider = NlpEngineProvider(nlp_configuration = {
-            "nlp_engine_name": "spacy",
-            "models": [{"lang_code": "en",
-                        "model_name": "en_core_web_md"
-                        }]
-        })
-        nlp_engine = nlp_engine_provider.create_engine()
-        analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
-        anonymizer = AnonymizerEngine()
-        results = analyzer.analyze(text=text,
-                                   entities=entities if entities else None,
-                                   language='en')
-        anonymized_data = anonymizer.anonymize(text=text, analyzer_results=results)
-        # Extract just the anonymized text, discarding items metadata
-        anonymized_text = anonymized_data.text
-        document.transformed_content = anonymized_text
-        return document
 
     async def translate(self, *, document: Document, property: TranslateProperty) -> Document:
-        '''
-        Use OpenAI function calling to translate the document to another language.
+        pass
+        # '''
+        # Use OpenAI function calling to translate the document to another language.
 
-        Returns:
-        Document: the translated document represented as a Doctran Document
-        '''
+        # Returns:
+        # Document: the translated document represented as a Doctran Document
+        # '''
 
-        function_parameters = {
-            "type": "object",
-            "properties": {},
-            "required": [],
-        }
+        # function_parameters = {
+        #     "type": "object",
+        #     "properties": {},
+        #     "required": [],
+        # }
 
-        function_parameters["properties"][property.name] = {
-            "type": property.type,
-            "description": property.description,
-            "properties": property.properties
-        }
-        if property.required:
-            function_parameters["required"].append(property.name)
+        # function_parameters["properties"][property.name] = {
+        #     "type": property.type,
+        #     "description": property.description,
+        #     "properties": property.properties
+        # }
+        # if property.required:
+        #     function_parameters["required"].append(property.name)
 
-        try:
-            function_call = OpenAIFunctionCall(
-                model=self.openai_model, 
-                messages=[{"role": "user", "content": document.transformed_content}], 
-                functions=[{
-                    "name": "translate_text",
-                    "description": "Re-write the whole text content in an other language",
-                    "parameters": function_parameters,
-                }],
-                function_call={"name": "translate_text"}
-            )
+        # try:
+        #     function_call = OpenAIFunctionCall(
+        #         model=self.openai_model, 
+        #         messages=[{"role": "user", "content": document.transformed_content}], 
+        #         functions=[{
+        #             "name": "translate_text",
+        #             "description": "Re-write the whole text content in an other language",
+        #             "parameters": function_parameters,
+        #         }],
+        #         function_call={"name": "translate_text"}
+        #     )
 
-            completion = self.openai.ChatCompletion.create(**function_call.dict())
-            arguments = completion.choices[0].message["function_call"]["arguments"]
-            arguments_dict = json.loads(arguments)
-            document.transformed_content = arguments_dict["translated_text"]
-            return document
-        except Exception as e:
-            raise Exception(f"OpenAI function call failed: {e}")
+        #     completion = self.openai.ChatCompletion.create(**function_call.dict())
+        #     arguments = completion.choices[0].message["function_call"]["arguments"]
+        #     arguments_dict = json.loads(arguments)
+        #     document.transformed_content = arguments_dict["translated_text"]
+        #     return document
+        # except Exception as e:
+        #     raise Exception(f"OpenAI function call failed: {e}")
