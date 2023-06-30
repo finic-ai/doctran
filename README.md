@@ -21,4 +21,4 @@
 </a>
 </p>
 
-Using ANN search to retrieve context for LLM-driven applications like chatbots and agents is standard practice, but suffers from low recall when embeddings are generated from documents with sparse information and noisy text. Doctran is an open-source platform that users LLMs and classical NLP techniques to transform unstructured text and increase information density.
+Vector databases are useful for retrieving context for LLM-driven applications like chatbots and agents. However, they struggle to retrieve relevant information if the source documents are indexed hapharzardly, especially when the data is noisy or information is sparse. Doctran is an open-source library that uses LLMs and classical NLP techniques to clean and transform unstructured text, resulting in documents with high information density that perform better in vector search.
