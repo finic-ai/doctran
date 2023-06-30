@@ -1,1 +1,1 @@
-from .prompts import Prompts
+from .prompts import COMPRESS_PROMPT, DENOISE_PROMPT

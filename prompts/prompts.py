@@ -1,12 +1,11 @@
 from enum import Enum
 
-class Prompts(Enum):
-    compress = """Summarize this document in fewer than {token_limit} tokens.
+COMPRESS_PROMPT = """Summarize this document, preserving as much information as possible
 
 Document:
 {document}"""
 
-    denoise = """Summarize this document but exclude all information that's not related to one of the topics provided.
+DENOISE_PROMPT = """Summarize this document but exclude all information that's not related to one of the topics provided.
 
 Topics:
 {topics}

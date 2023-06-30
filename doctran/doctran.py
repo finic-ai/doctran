@@ -5,11 +5,13 @@ import uuid
 from enum import Enum
 import spacy
 from presidio_analyzer import AnalyzerEngine
+from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel
 import requests
-from prompts import Prompts
+import tiktoken
+from prompts import COMPRESS_PROMPT
 
 import pdb
 
@@ -77,9 +79,13 @@ class Document(BaseModel):
     def get_char_size(self):
         pass
 
-class OpenAIFunctionCall(BaseModel):
+class OpenAIChatCompletionCall(BaseModel):
     model: str = "gpt-3.5-turbo-0613"
     messages: List[Dict[str, str]]
+    temperature: int = 0
+    max_tokens: Optional[int] = None
+
+class OpenAIFunctionCall(OpenAIChatCompletionCall):
     functions: List[Dict[str, Any]]
     function_call: str | Dict[str, Any]
 
@@ -132,7 +138,7 @@ class Doctran:
         Use OpenAI function calling to extract structured data from the document.
 
         Returns:
-            values: the extracted values for each parameter
+            document: the original document, with the extracted properties added to the extracted_properties field
         '''
         function_parameters = {
             "type": "object",
@@ -152,6 +158,7 @@ class Doctran:
         try:
             function_call = OpenAIFunctionCall(
                 model=self.openai_model, 
+                temperature=0,
                 messages=[{"role": "user", "content": document.transformed_content}], 
                 functions=[{
                     "name": "extract_information",
@@ -173,7 +180,54 @@ class Doctran:
 
     # TODO: Use OpenAI function call to compress a document to under a certain token limit
     def compress(self, *, document: Document, token_limit: int) -> Document:
-        pass
+        '''
+        Use OpenAI function calling to summarize the document to under a certain token limit.
+
+        Returns:
+            document: the original document, with the compressed content added to the transformed_content field
+        '''
+        function_parameters = {
+            "type": "object",
+            "properties": {
+                "summary": {
+                    "type": "string",
+                    "description": "The summary of the document.",
+                }
+            },
+            "required": ["summary"],
+        }
+
+        encoding = tiktoken.encoding_for_model(self.openai_model)
+        content_token_size = len(encoding.encode(document.transformed_content))
+        if content_token_size + token_limit > 4000:
+            raise Exception(f"Cannot compress document to {token_limit} tokens, as the document already takes up {content_token_size} tokens.")
+        try:
+            function_call = OpenAIFunctionCall(
+                model=self.openai_model, 
+                max_tokens=token_limit + 100,
+                temperature=0,
+                messages=[
+                    {"role": "user", "content": document.transformed_content}
+                ], 
+                functions=[{
+                    "name": "summarize",
+                    "description": f"Summarize the document in under {token_limit} tokens.",
+                    "parameters": function_parameters,
+                }],
+                function_call={"name": "summarize"}
+            )
+            completion = self.openai.ChatCompletion.create(**function_call.dict())
+            arguments = completion.choices[0].message["function_call"]["arguments"]
+            try:
+                # TODO: retry if the summary is longer than the token limit
+                document.transformed_content = json.loads(arguments).get("summary")
+            except Exception as e:
+                raise Exception("OpenAI returned malformatted JSON" +
+                                "This is likely due to the completion running out of tokens. " +
+                                f"Setting a higher token limit may fix this error. JSON returned: {arguments}")
+            return document
+        except Exception as e:
+            raise Exception(f"OpenAI function call failed: {e}")
     
     async def denoise(self, *, document: Document, property: DenoiseProperty) -> Document:
         '''
@@ -231,7 +285,7 @@ class Doctran:
         Returns:
             document: the document with content redacted from document.transformed_content
         '''
-
+        # Entities can be provided as either a string or enum, so convert to string in a all cases
         for i, entity in enumerate(entities):
             if entity in RecognizerEntity.__members__:
                 entities[i] = RecognizerEntity[entity].value
@@ -242,7 +296,7 @@ class Doctran:
             spacy.load("en_core_web_md")
         except OSError:
             while True:
-                response = input("en_core_web_md model not found, but is required to run presidio-anonymizer. Download it now? (Y/n)")
+                response = input("en_core_web_md model not found, but is required to run presidio-anonymizer. Download it now? (~40MB) (Y/n)")
                 if response.lower() in ["n", "no"]:
                     raise Exception("Cannot run presidio-anonymizer without en_core_web_md model.")
                 elif response.lower() in ["y", "yes", ""]:
@@ -253,17 +307,21 @@ class Doctran:
                 else:
                     print("Invalid response.")
         text = document.transformed_content
-        analyzer = AnalyzerEngine()
+        nlp_engine_provider = NlpEngineProvider(nlp_configuration = {
+            "nlp_engine_name": "spacy",
+            "models": [{"lang_code": "en",
+                        "model_name": "en_core_web_md"
+                        }]
+        })
+        nlp_engine = nlp_engine_provider.create_engine()
+        analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
         anonymizer = AnonymizerEngine()
         results = analyzer.analyze(text=text,
                                    entities=entities if entities else None,
                                    language='en')
         anonymized_data = anonymizer.anonymize(text=text, analyzer_results=results)
-
-        # Extract just the text without the verbose part
-        text_section = str(anonymized_data).split("\nitems:\n")
-        anonymized_text = text_section[0].strip().removeprefix("text: ")
-
+        # Extract just the anonymized text, discarding items metadata
+        anonymized_text = anonymized_data.text
         document.transformed_content = anonymized_text
         return document
 

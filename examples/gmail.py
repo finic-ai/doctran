@@ -116,6 +116,11 @@ async def run():
         # await test_extract(doctran=doctran, document=document, parsed_email=parsed_email)
 
         # Redact PII
-        document = await doctran.redact(document=document, entities=["PERSON", "EMAIL_ADDRESS"])
+        # document = doctran.redact(document=document, entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"])
+        # print(document.transformed_content)
+
+        # Compress context
+        document = doctran.compress(document=document, token_limit=100)
+        print(document.transformed_content)
 
 asyncio.run(run())
