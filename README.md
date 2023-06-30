@@ -3,7 +3,7 @@
 </h2>
 
 <p align="center">
-  <p align="center"><b>Doc</b>ument <b>tran</b>sformation framework for retrieval-augmented generation</p>
+  <p align="center"><b>Doc</b>ument <b>tran</b>sformation library for retrieval-augmented generation</p>
 </p>
 <p align="center">
 <a href="https://join.slack.com/t/psychicapi/shared_invite/zt-1ty1wz6w0-8jkmdvBpM5kj_Fh30EiCcg" target="_blank">
@@ -21,4 +21,4 @@
 </a>
 </p>
 
-Vector databases are useful for retrieving context for LLM-driven applications like chatbots and agents. However, they struggle to retrieve relevant information if the source documents are indexed hapharzardly, especially when the data is noisy or information is sparse. Doctran is an open-source library that uses LLMs and classical NLP techniques to clean and transform unstructured text, resulting in documents with high information density that perform better in vector search.
+Vector databases are useful for retrieving context for LLM-driven applications like chatbots and agents. However, they struggle to find relevant information if the source documents are indexed hapharzardly, especially when the data is noisy or information is sparse. Doctran is an open-source library that uses LLMs and classical NLP techniques to clean, transform, and extract properties from unstructured text, resulting in documents with high information density that are more easily retrieved.
