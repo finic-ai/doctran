@@ -131,6 +131,6 @@ async def run():
 
         # Interrogate
         document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).summarize().interrogate().execute()
-        print(document.transformed_content)
+        print(document.extracted_properties)
 
 asyncio.run(run())

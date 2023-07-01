@@ -74,16 +74,17 @@ class OpenAIDocumentTransformer(DocumentTransformer):
             arguments = completion.choices[0].message["function_call"]["arguments"]
             try:
                 arguments = json.loads(arguments)
-                if len(arguments) > 1:
-                    # If there are multiple arguments returned, we should treat it as a dictionary
-                    document.transformed_content = arguments
-                else:
-                    # If there is one argument, we should get the value of that argument as a string
-                    document.transformed_content = next(iter(arguments.values()))
             except Exception as e:
                 raise Exception("OpenAI returned malformatted JSON" +
                                 "This is likely due to the completion running out of tokens. " +
                                 f"Setting a higher token limit may fix this error. JSON returned: {arguments}")
+            first_value = next(iter(arguments.values()))
+            if len(arguments) > 1 or not isinstance(first_value, str):
+                # If multiple arguments or a dict/list is returned, treat arguments as extracted values
+                document.extracted_properties = document.extracted_properties | arguments
+            else:
+                # If there is only one argument and it's a string, treat arguments as transformed content
+                document.transformed_content = first_value
             return document
         except Exception as e:
             raise Exception(f"OpenAI function call failed: {e}")

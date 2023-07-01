@@ -81,7 +81,7 @@ class Document(BaseModel):
     transformed_content: str
     config: DoctranConfig
     transformation_builder: 'DocumentTransformationBuilder' = None
-    extracted_properties: Optional[Dict[str, Any]] = None
+    extracted_properties: Optional[Dict[str, Any]] = {}
     applied_transformations: Optional[List[Transformation]] = []
     metadata: Optional[Dict[str, Any]] = None
 
