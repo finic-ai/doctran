@@ -1,2 +1,1 @@
-from .doctran import Doctran, Document, DoctranConfig
-from .models import ContentType, ExtractProperty, RecognizerEntity, Transformation
+from .doctran import Doctran, Document, DoctranConfig, ContentType, ExtractProperty, RecognizerEntity, Transformation

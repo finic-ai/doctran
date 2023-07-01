@@ -75,8 +75,10 @@ class OpenAIDocumentTransformer(DocumentTransformer):
             try:
                 arguments = json.loads(arguments)
                 if len(arguments) > 1:
+                    # If there are multiple arguments returned, we should treat it as a dictionary
                     document.transformed_content = arguments
                 else:
+                    # If there is one argument, we should get the value of that argument as a string
                     document.transformed_content = next(iter(arguments.values()))
             except Exception as e:
                 raise Exception("OpenAI returned malformatted JSON" +
@@ -123,7 +125,7 @@ class DocumentSummarizer(OpenAIDocumentTransformer):
         super().__init__(config)
         self.token_limit = token_limit
         self.function_name = "summarize"
-        self.function_description = f"Summarize the document in under {self.token_limit} tokens."
+        self.function_description = f"Summarize a document in under {self.token_limit} tokens."
         self.function_parameters["properties"]["summary"] = {
             "type": "string",
             "description": "The summary of the document.",
@@ -188,23 +190,75 @@ class DocumentRedactor(DocumentTransformer):
         document.transformed_content = anonymized_text
         return document
 
-class DocumentDenoiser(OpenAIDocumentTransformer):
+class DocumentRefiner(OpenAIDocumentTransformer):
     '''
     Use OpenAI function calling to remove irrelevant information from the document.
 
     Returns:
-        Document: the denoised content represented as a Doctran Document
+        Document: the refined content represented as a Doctran Document
     '''
+    topics: List[str]
+
     def __init__(self, *, config: DoctranConfig, topics: List[str] = None) -> None:
         super().__init__(config)
         self.topics = topics
-        self.function_name = "denoise"
+        self.function_name = "refine"
         if topics:
-            self.function_description = f"Remove all information from the document that is not relevant to the following topics:{' -'.join(self.topics)}"
+            self.function_description = f"Remove all information from a document that is not relevant to the following topics: -{' -'.join(self.topics)}"
         else:
-            self.function_description = "Remove all information from the document that is not relevant."
-        self.function_parameters["properties"]["denoised_document"] = {
+            self.function_description = "Remove all irrelevant information from a document."
+        self.function_parameters["properties"]["refined_document"] = {
             "type": "string",
             "description": "The document with irrelevant information removed.",
         }
-        self.function_parameters["required"].append("denoised_document")
+        self.function_parameters["required"].append("refined_document")
+
+class DocumentTranslator(OpenAIDocumentTransformer):
+    '''
+    Use OpenAI function calling to translate the document to another language.
+
+    Returns:
+        Document: the translated document represented as a Doctran Document
+    '''
+    language: str
+
+    def __init__(self, *, config: DoctranConfig, language: str) -> None:
+        super().__init__(config)
+        self.function_name = "translate"
+        self.function_description = f"Translate a document into {language}"
+        self.function_parameters["properties"]["translated_document"] = {
+            "type": "string",
+            "description": f"The document translated into {language}."
+        }
+        self.function_parameters["required"].append("translated_document")
+
+class DocumentInterrogator(OpenAIDocumentTransformer):
+    '''
+    Use OpenAI function calling to convert the document to a series of questions and answers.
+
+    Returns:
+        Document: the interrogated document represented as a Doctran Document
+    '''
+    def __init__(self, *, config: DoctranConfig) -> None:
+        super().__init__(config)
+        self.function_name = "interrogate"
+        self.function_description = "Convert a text document into a series of questions and answers."
+        self.function_parameters["properties"]["questions_and_answers"] = {
+            "type": "array",
+            "description": "The list of questions and answers.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "question": {
+                        "type": "string",
+                        "description": "The question.",
+                    },
+                    "answer": {
+                        "type": "string",
+                        "description": "The answer.",
+                    },
+                },
+                "required": ["question", "answer"],
+            },
+        }
+        self.function_parameters["required"].append("questions_and_answers")

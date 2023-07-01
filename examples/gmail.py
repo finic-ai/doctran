@@ -101,7 +101,7 @@ async def run():
     num_entries = len(mbox_obj)
     print("Loaded {num_entries} entries from mbox file".format(num_entries=num_entries))
 
-    doctran = Doctran(openai_api_key=os.environ['OPENAI_API_KEY'], openai_model="gpt-4-0613")
+    doctran = Doctran(openai_api_key=os.environ['OPENAI_API_KEY'], openai_model="gpt-4", openai_token_limit=8000)
 
     for i in range(700, 710):
         email_obj = mbox_obj[i]
@@ -122,9 +122,15 @@ async def run():
         # Summarize context
         # document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).summarize(token_limit=100).execute()
 
-        # Denoise context
-        topics = ["shawshank redemption", "startups"]
-        document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).denoise(topics=topics).execute()
+        # Refine context
+        # topics = ["shawshank redemption", "forrest gump"]
+        # document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).refine(topics=topics).execute()
+
+        # Translate
+        # document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).summarize(token_limit=100).translate(language="spanish").execute()
+
+        # Interrogate
+        document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).summarize().interrogate().execute()
         print(document.transformed_content)
 
 asyncio.run(run())

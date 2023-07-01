@@ -10,9 +10,68 @@ from presidio_anonymizer import AnonymizerEngine
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel
 import requests
-from doctran.models import ContentType, DoctranConfig, Transformation, ExtractProperty, DenoiseProperty, TranslateProperty, RecognizerEntity
 
-import pdb
+class ExtractProperty(BaseModel):
+    name: str
+    description: str
+    type: Literal["string", "number", "boolean", "array", "object"]
+    items: Optional[List | Dict[str, Any]]
+    enum: Optional[List[str]]
+    required: bool = True
+
+class DoctranConfig(BaseModel):
+    openai_api_key: str
+    openai_model: str
+    openai_completions_url: str
+    openai: Any
+    openai_token_limit: int
+
+class ContentType(Enum):
+    text = "text"
+    html = "html"
+    pdf = "pdf"
+    mbox = "mbox"
+
+class Transformation(Enum):
+    summarize = "DocumentSummarizer"
+    refine = "DocumentRefiner"
+    extract = "DocumentExtractor"
+    interrogate = "DocumentInterrogator"
+    redact = "DocumentRedactor"
+    translate = "DocumentTranslator"
+
+# Not easily retrievalble from the presidio library so it should be kept up to date manually based on
+# https://microsoft.github.io/presidio/supported_entities/
+class RecognizerEntity(Enum):
+    CREDIT_CARD = "CREDIT_CARD"
+    CRYPTO = "CRYPTO"
+    DATE_TIME = "DATE_TIME"
+    EMAIL_ADDRESS = "EMAIL_ADDRESS"
+    IBAN_CODE = "IBAN_CODE"
+    IP_ADDRESS = "IP_ADDRESS"
+    NRP = "NRP"
+    PHONE_NUMBER = "PHONE_NUMBER"
+    URL = "URL"
+    LOCATION = "LOCATION"
+    PERSON = "PERSON"
+    MEDICAL_LICENSE = "MEDICAL_LICENSE"
+    US_BANK_NUMBER = "US_BANK_NUMBER"
+    US_DRIVER_LICENSE = "US_DRIVER_LICENSE"
+    US_ITIN = "US_ITIN"
+    US_PASSPORT = "US_PASSPORT"
+    US_SSN = "US_SSN"
+    UK_NHS = "UK_NHS"
+    ES_NIF = "ES_NIF"
+    IT_FISCAL_CODE = "IT_FISCAL_CODE"
+    IT_DRIVER_LICENSE = "IT_DRIVER_LICENSE"
+    IT_VAT_CODE = "IT_VAT_CODE"
+    IT_PASSPORT = "IT_PASSPORT"
+    IT_IDENTITY_CARD = "IT_IDENTITY_CARD"
+    SG_NRIC_FIN = "SG_NRIC_FIN"
+    AU_ABN = "AU_ABN"
+    AU_ACN = "AU_ACN"
+    AU_TFN = "AU_TFN"
+    AU_MEDICARE_NUMBER = "AU_MEDICARE_NUMBER"
 
 class Document(BaseModel):
     uri: str
@@ -44,10 +103,10 @@ class Document(BaseModel):
         self.transformation_builder.redact(entities=entities)
         return self.transformation_builder
 
-    def denoise(self, *, topics: List[str] = None) -> 'DocumentTransformationBuilder':
+    def refine(self, *, topics: List[str] = None) -> 'DocumentTransformationBuilder':
         if not self.transformation_builder:
             self.transformation_builder = DocumentTransformationBuilder(self)
-        self.transformation_builder.denoise(topics=topics)
+        self.transformation_builder.refine(topics=topics)
         return self.transformation_builder
 
     def translate(self) -> 'DocumentTransformationBuilder':
@@ -58,7 +117,7 @@ class Document(BaseModel):
 
 class DocumentTransformationBuilder:
     '''
-    A builder for Document transformations to enable chaining of transformations.
+    A builder to enable chaining of document transformations.
     '''
     def __init__(self, document: Document) -> None:
         self.document = document
@@ -80,7 +139,7 @@ class DocumentTransformationBuilder:
         self.transformations.append((Transformation.extract, {"properties": properties}))
         return self
 
-    def summarize(self, token_limit: int) -> 'DocumentTransformationBuilder':
+    def summarize(self, token_limit: int = 100) -> 'DocumentTransformationBuilder':
         self.transformations.append((Transformation.summarize, {"token_limit": token_limit}))
         return self
 
@@ -88,8 +147,8 @@ class DocumentTransformationBuilder:
         self.transformations.append((Transformation.redact, {"entities": entities}))
         return self
 
-    def denoise(self, *, topics: List[str] = None) -> 'DocumentTransformationBuilder':
-        self.transformations.append((Transformation.denoise, {"topics": topics}))
+    def refine(self, *, topics: List[str] = None) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.refine, {"topics": topics}))
         return self
 
     def translate(self, *, language: str) -> 'DocumentTransformationBuilder':
@@ -102,7 +161,7 @@ class DocumentTransformationBuilder:
 
 
 class Doctran:
-    def __init__(self, openai_api_key: str = None, openai_model: str = "gpt-3.5-turbo-0613", openai_token_limit: int = 4000):
+    def __init__(self, openai_api_key: str = None, openai_model: str = "gpt-4", openai_token_limit: int = 8000):
         self.config = DoctranConfig(
             openai_api_key=openai_api_key,
             openai_model=openai_model,
@@ -130,50 +189,3 @@ class Doctran:
             # TODO: Optional chunking for documents that are too large
             document = Document(id=str(uuid.uuid4()), content_type=content_type, raw_content=content, transformed_content=content, config=self.config, uri=uri, metadata=metadata)
             return document
-    
-    # TODO: Use OpenAI function call to convert documents to question and answer format
-    def interrogate(self, *, document: Document) -> List[dict[str, str]]:
-        pass
-
-    async def translate(self, *, document: Document, property: TranslateProperty) -> Document:
-        pass
-        # '''
-        # Use OpenAI function calling to translate the document to another language.
-
-        # Returns:
-        # Document: the translated document represented as a Doctran Document
-        # '''
-
-        # function_parameters = {
-        #     "type": "object",
-        #     "properties": {},
-        #     "required": [],
-        # }
-
-        # function_parameters["properties"][property.name] = {
-        #     "type": property.type,
-        #     "description": property.description,
-        #     "properties": property.properties
-        # }
-        # if property.required:
-        #     function_parameters["required"].append(property.name)
-
-        # try:
-        #     function_call = OpenAIFunctionCall(
-        #         model=self.openai_model, 
-        #         messages=[{"role": "user", "content": document.transformed_content}], 
-        #         functions=[{
-        #             "name": "translate_text",
-        #             "description": "Re-write the whole text content in an other language",
-        #             "parameters": function_parameters,
-        #         }],
-        #         function_call={"name": "translate_text"}
-        #     )
-
-        #     completion = self.openai.ChatCompletion.create(**function_call.dict())
-        #     arguments = completion.choices[0].message["function_call"]["arguments"]
-        #     arguments_dict = json.loads(arguments)
-        #     document.transformed_content = arguments_dict["translated_text"]
-        #     return document
-        # except Exception as e:
-        #     raise Exception(f"OpenAI function call failed: {e}")
