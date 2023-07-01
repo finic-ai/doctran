@@ -1,1 +1,1 @@
-from .transformers import DocumentExtractor, DocumentCompressor, DocumentRedactor, RecognizerEntity, ExtractProperty
+from .transformers import DocumentExtractor, DocumentSummarizer, DocumentRedactor, RecognizerEntity, ExtractProperty

@@ -32,10 +32,10 @@ class Document(BaseModel):
         self.transformation_builder.extract(properties=properties)
         return self.transformation_builder
     
-    def compress(self, token_limit: int) -> 'DocumentTransformationBuilder':
+    def summarize(self, token_limit: int) -> 'DocumentTransformationBuilder':
         if not self.transformation_builder:
             self.transformation_builder = DocumentTransformationBuilder(self)
-        self.transformation_builder.compress(token_limit=token_limit)
+        self.transformation_builder.summarize(token_limit=token_limit)
         return self.transformation_builder
 
     def redact(self, *, entities: List[RecognizerEntity | str]) -> 'DocumentTransformationBuilder':
@@ -77,8 +77,8 @@ class DocumentTransformationBuilder:
         self.transformations.append((Transformation.extract, {"properties": properties}))
         return self
 
-    def compress(self, token_limit: int) -> 'DocumentTransformationBuilder':
-        self.transformations.append((Transformation.compress, {"token_limit": token_limit}))
+    def summarize(self, token_limit: int) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.summarize, {"token_limit": token_limit}))
         return self
 
     def redact(self, *, entities: List[RecognizerEntity | str]) -> 'DocumentTransformationBuilder':
@@ -126,50 +126,6 @@ class Doctran:
             # TODO: Optional chunking for documents that are too large
             document = Document(id=str(uuid.uuid4()), content_type=content_type, raw_content=content, transformed_content=content, config=self.config, uri=uri, metadata=metadata)
             return document
-    
-    async def denoise(self, *, document: Document, property: DenoiseProperty) -> Document:
-        # '''
-        # Use OpenAI function calling to remove irrelevant information from the document.
-
-        # Returns:
-        # Document: the denoised content represented as a Doctran Document
-        # '''
-
-        # function_parameters = {
-        #     "type": "object",
-        #     "properties": {},
-        #     "required": [],
-        # }
-
-        # function_parameters["properties"][property.name] = {
-        #     "type": property.type,
-        #     "description": property.description,
-        #     "properties": property.properties
-        # }
-        # if property.required:
-        #     function_parameters["required"].append(property.name)
-
-        # try:
-        #     function_call = OpenAIFunctionCall(
-        #         model=self.openai_model, 
-        #         messages=[{"role": "user", "content": document.transformed_content}], 
-        #         functions=[{
-        #             "name": "denoise_information",
-        #             "description": "Re-write raw text but exclude all information that's not relevant",
-        #             "parameters": function_parameters,
-        #         }],
-        #         function_call={"name": "denoise_information"}
-        #     )
-
-        #     completion = self.openai.ChatCompletion.create(**function_call.dict())
-        #     arguments = completion.choices[0].message["function_call"]["arguments"]
-        #     arguments_dict = json.loads(arguments)
-        #     document.transformed_content = arguments_dict["only_relevant_data"]
-        #     return document
-        # except Exception as e:
-        #     raise Exception(f"OpenAI function call failed: {e}")
-        pass
-
     
     # TODO: Use OpenAI function call to convert documents to question and answer format
     def interrogate(self, *, document: Document) -> List[dict[str, str]]:

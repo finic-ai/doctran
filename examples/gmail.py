@@ -119,8 +119,8 @@ async def run():
         # document = doctran.redact(document=document, entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"])
         # print(document.transformed_content)
 
-        # Compress context
-        document = await document.compress(token_limit=100).redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).execute()
+        # Summarize context
+        document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).summarize(token_limit=100).execute()
         print(document.transformed_content)
 
 asyncio.run(run())

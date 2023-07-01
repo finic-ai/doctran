@@ -37,7 +37,7 @@ class ContentType(Enum):
     mbox = "mbox"
 
 class Transformation(Enum):
-    compress = "DocumentCompressor"
+    summarize = "DocumentSummarizer"
     denoise = "DocumentDenoiser"
     extract = "DocumentExtractor"
     interrogate = "DocumentInterrogator"
