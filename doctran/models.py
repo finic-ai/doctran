@@ -29,6 +29,7 @@ class DoctranConfig(BaseModel):
     openai_model: str
     openai_completions_url: str
     openai: Any
+    openai_token_limit: int
 
 class ContentType(Enum):
     text = "text"

@@ -120,7 +120,11 @@ async def run():
         # print(document.transformed_content)
 
         # Summarize context
-        document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).summarize(token_limit=100).execute()
+        # document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).summarize(token_limit=100).execute()
+
+        # Denoise context
+        topics = ["shawshank redemption", "startups"]
+        document = await document.redact(entities=["PERSON", "EMAIL_ADDRESS", "LOCATION"]).denoise(topics=topics).execute()
         print(document.transformed_content)
 
 asyncio.run(run())

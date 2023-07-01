@@ -12,6 +12,10 @@ import requests
 import tiktoken
 from doctran import Document, DoctranConfig, ExtractProperty, RecognizerEntity
 
+class TooManyTokensException(Exception):
+    def __init__(self, content_token_size: int, token_limit: int):
+        super().__init__(f"OpenAI document transformation failed. The document is {content_token_size} tokens long, which exceeds the token limit of {token_limit}.")
+
 class OpenAIChatCompletionCall(BaseModel):
     model: str = "gpt-3.5-turbo-0613"
     messages: List[Dict[str, str]]
@@ -43,9 +47,16 @@ class OpenAIDocumentTransformer(DocumentTransformer):
             "required": [],
         }
     
-    @abstractmethod
     async def transform(self, document: Document) -> Document:
-        pass
+        encoding = tiktoken.encoding_for_model(self.config.openai_model)
+        content_token_size = len(encoding.encode(document.transformed_content))
+        try:
+            if content_token_size > self.config.openai_token_limit:
+                raise TooManyTokensException(content_token_size, self.config.openai_token_limit)
+        except Exception as e:
+            print(e)
+            return document
+        return await self.executeOpenAICall(document)
 
     async def executeOpenAICall(self, document: Document) -> Document:
         try:
@@ -76,6 +87,12 @@ class OpenAIDocumentTransformer(DocumentTransformer):
             raise Exception(f"OpenAI function call failed: {e}")
 
 class DocumentExtractor(OpenAIDocumentTransformer):
+    '''
+    Use OpenAI function calling to extract structured data from the document.
+
+    Returns:
+        document: the original document, with the extracted properties added to the extracted_properties field
+    '''
     properties: List[ExtractProperty]
 
     def __init__(self, *, config: DoctranConfig, properties: List[ExtractProperty]) -> None:
@@ -92,17 +109,14 @@ class DocumentExtractor(OpenAIDocumentTransformer):
             }
             if prop.required:
                 self.function_parameters["required"].append(prop.name)
-    
-    async def transform(self, document: Document) -> Document:
-        '''
-        Use OpenAI function calling to extract structured data from the document.
-
-        Returns:
-            document: the original document, with the extracted properties added to the extracted_properties field
-        '''
-        return await self.executeOpenAICall(document)
 
 class DocumentSummarizer(OpenAIDocumentTransformer):
+    '''
+    Use OpenAI function calling to summarize the document to under a certain token limit.
+
+    Returns:
+        document: the original document, with the summarized content added to the transformed_content field
+    '''
     token_limit: int
 
     def __init__(self, *, config: DoctranConfig, token_limit: int) -> None:
@@ -115,21 +129,14 @@ class DocumentSummarizer(OpenAIDocumentTransformer):
             "description": "The summary of the document.",
         }
         self.function_parameters["required"].append("summary")
-    
-    async def transform(self, document: Document) -> Document:
-        '''
-        Use OpenAI function calling to summarize the document to under a certain token limit.
-
-        Returns:
-            document: the original document, with the summarized content added to the transformed_content field
-        '''
-        encoding = tiktoken.encoding_for_model(self.config.openai_model)
-        content_token_size = len(encoding.encode(document.transformed_content))
-        if content_token_size + self.token_limit > 4000:
-            raise Exception(f"Cannot summarize document to {self.token_limit} tokens, as the document already takes up {content_token_size} tokens.")
-        return await self.executeOpenAICall(document)
 
 class DocumentRedactor(DocumentTransformer):
+    '''
+    Use presidio to redact sensitive information from the document.
+
+    Returns:
+        document: the document with content redacted from document.transformed_content
+    '''
     entities: List[str]
 
     def __init__(self, *, config: DoctranConfig, entities: List[RecognizerEntity | str] = None) -> None:
@@ -144,12 +151,6 @@ class DocumentRedactor(DocumentTransformer):
         self.entities = entities
     
     async def transform(self, document: Document) -> Document:
-        '''
-        Use presidio to redact sensitive information from the document.
-
-        Returns:
-            document: the document with content redacted from document.transformed_content
-        '''
         try:
             spacy.load("en_core_web_md")
         except OSError:
@@ -186,3 +187,24 @@ class DocumentRedactor(DocumentTransformer):
         anonymized_text = anonymized_data.text
         document.transformed_content = anonymized_text
         return document
+
+class DocumentDenoiser(OpenAIDocumentTransformer):
+    '''
+    Use OpenAI function calling to remove irrelevant information from the document.
+
+    Returns:
+        Document: the denoised content represented as a Doctran Document
+    '''
+    def __init__(self, *, config: DoctranConfig, topics: List[str] = None) -> None:
+        super().__init__(config)
+        self.topics = topics
+        self.function_name = "denoise"
+        if topics:
+            self.function_description = f"Remove all information from the document that is not relevant to the following topics:{' -'.join(self.topics)}"
+        else:
+            self.function_description = "Remove all information from the document that is not relevant."
+        self.function_parameters["properties"]["denoised_document"] = {
+            "type": "string",
+            "description": "The document with irrelevant information removed.",
+        }
+        self.function_parameters["required"].append("denoised_document")

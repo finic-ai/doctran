@@ -44,8 +44,11 @@ class Document(BaseModel):
         self.transformation_builder.redact(entities=entities)
         return self.transformation_builder
 
-    def denoise(self) -> 'DocumentTransformationBuilder':
-        pass
+    def denoise(self, *, topics: List[str] = None) -> 'DocumentTransformationBuilder':
+        if not self.transformation_builder:
+            self.transformation_builder = DocumentTransformationBuilder(self)
+        self.transformation_builder.denoise(topics=topics)
+        return self.transformation_builder
 
     def translate(self) -> 'DocumentTransformationBuilder':
         pass
@@ -85,26 +88,27 @@ class DocumentTransformationBuilder:
         self.transformations.append((Transformation.redact, {"entities": entities}))
         return self
 
-    def denoise(self) -> 'DocumentTransformationBuilder':
-        self.transformations.append(Transformation.denoise)
+    def denoise(self, *, topics: List[str] = None) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.denoise, {"topics": topics}))
         return self
 
-    def translate(self) -> 'DocumentTransformationBuilder':
-        self.transformations.append(Transformation.translate)
+    def translate(self, *, language: str) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.translate, {"language": language}))
         return self
 
     def interrogate(self) -> 'DocumentTransformationBuilder':
-        self.transformations.append(Transformation.interrogate)
+        self.transformations.append((Transformation.interrogate, {}))
         return self
 
 
 class Doctran:
-    def __init__(self, openai_api_key: str = None, openai_model: str = "gpt-3.5-turbo-0613"):
+    def __init__(self, openai_api_key: str = None, openai_model: str = "gpt-3.5-turbo-0613", openai_token_limit: int = 4000):
         self.config = DoctranConfig(
             openai_api_key=openai_api_key,
             openai_model=openai_model,
             openai_completions_url="https://api.openai.com/v1/completions",
-            openai=openai
+            openai=openai,
+            openai_token_limit=openai_token_limit
         )
         if openai_api_key:
             self.config.openai.api_key = openai_api_key
