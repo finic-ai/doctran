@@ -175,7 +175,7 @@ class Doctran:
         else:
             raise Exception("No OpenAI API Key provided")
 
-    def parse(self, *, content: str, content_type: ContentType, uri: str = None, metadata: dict = None) -> Document:
+    def parse(self, *, content: str, content_type: ContentType = "text", uri: str = None, metadata: dict = None) -> Document:
         '''
         Parse raw text and apply different chunking schemes based on the content type.
 
