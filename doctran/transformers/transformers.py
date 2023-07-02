@@ -141,11 +141,17 @@ class DocumentRedactor(DocumentTransformer):
         document: the document with content redacted from document.transformed_content
     '''
     entities: List[str]
+    spacy_model: str
+    interactive: bool
 
-    def __init__(self, *, config: DoctranConfig, entities: List[RecognizerEntity | str] = None) -> None:
+    def __init__(self, *, config: DoctranConfig, entities: List[RecognizerEntity | str] = None, spacy_model: str = "en_core_web_md", interactive: bool = True) -> None:
         super().__init__(config)
         # TODO: support multiple NER models and sizes
         # Entities can be provided as either a string or enum, so convert to string in a all cases
+        if spacy_model not in ["en_core_web_sm", "en_core_web_md", "en_core_web_lg", "en_core_web_trf"]:
+            raise Exception(f"Invalid spacy english language model: {spacy_model}")
+        self.spacy_model = spacy_model
+        self.interactive = interactive
         for i, entity in enumerate(entities):
             if entity in RecognizerEntity.__members__:
                 entities[i] = RecognizerEntity[entity].value
@@ -155,24 +161,28 @@ class DocumentRedactor(DocumentTransformer):
     
     async def transform(self, document: Document) -> Document:
         try:
-            spacy.load("en_core_web_md")
+            spacy.load(self.spacy_model)
         except OSError:
-            while True:
-                response = input("en_core_web_md model not found, but is required to run presidio-anonymizer. Download it now? (~40MB) (Y/n)")
-                if response.lower() in ["n", "no"]:
-                    raise Exception("Cannot run presidio-anonymizer without en_core_web_md model.")
-                elif response.lower() in ["y", "yes", ""]:
-                    print("Downloading...")
-                    from spacy.cli.download import download
-                    download(model="en_core_web_md")
-                    break
-                else:
-                    print("Invalid response.")
+            from spacy.cli.download import download
+            if not self.interactive:
+                download(model="en_core_web_md")
+            else:
+                while True:
+                    response = input(f"{self.spacy_model} model not found, but is required to run presidio-anonymizer. Download it now? (~40MB) (Y/n)")
+                    if response.lower() in ["n", "no"]:
+                        raise Exception(f"Cannot run presidio-anonymizer without {self.spacy_model} model.")
+                    elif response.lower() in ["y", "yes", ""]:
+                        print("Downloading...")
+                        from spacy.cli.download import download
+                        download(model="en_core_web_md")
+                        break
+                    else:
+                        print("Invalid response.")
         text = document.transformed_content
         nlp_engine_provider = NlpEngineProvider(nlp_configuration = {
             "nlp_engine_name": "spacy",
             "models": [{"lang_code": "en",
-                        "model_name": "en_core_web_md"
+                        "model_name": self.spacy_model
                         }]
         })
         nlp_engine = nlp_engine_provider.create_engine()

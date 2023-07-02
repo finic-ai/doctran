@@ -80,40 +80,38 @@ class Document(BaseModel):
     raw_content: str
     transformed_content: str
     config: DoctranConfig
-    transformation_builder: 'DocumentTransformationBuilder' = None
     extracted_properties: Optional[Dict[str, Any]] = {}
-    applied_transformations: Optional[List[Transformation]] = []
     metadata: Optional[Dict[str, Any]] = None
 
     def extract(self, *, properties: List[ExtractProperty]) -> 'DocumentTransformationBuilder':
-        if not self.transformation_builder:
-            self.transformation_builder = DocumentTransformationBuilder(self)
-        self.transformation_builder.extract(properties=properties)
-        return self.transformation_builder
+        transformation_builder = DocumentTransformationBuilder(self)
+        transformation_builder.extract(properties=properties)
+        return transformation_builder
     
     def summarize(self, token_limit: int) -> 'DocumentTransformationBuilder':
-        if not self.transformation_builder:
-            self.transformation_builder = DocumentTransformationBuilder(self)
-        self.transformation_builder.summarize(token_limit=token_limit)
-        return self.transformation_builder
+        transformation_builder = DocumentTransformationBuilder(self)
+        transformation_builder.summarize(token_limit=token_limit)
+        return transformation_builder
 
-    def redact(self, *, entities: List[RecognizerEntity | str]) -> 'DocumentTransformationBuilder':
-        if not self.transformation_builder:
-            self.transformation_builder = DocumentTransformationBuilder(self)
-        self.transformation_builder.redact(entities=entities)
-        return self.transformation_builder
+    def redact(self, *, entities: List[RecognizerEntity | str], spacy_model: str = "en_core_web_md", interactive: bool = True) -> 'DocumentTransformationBuilder':
+        transformation_builder = DocumentTransformationBuilder(self)
+        transformation_builder.redact(entities=entities, spacy_model=spacy_model, interactive=interactive)
+        return transformation_builder
 
     def refine(self, *, topics: List[str] = None) -> 'DocumentTransformationBuilder':
-        if not self.transformation_builder:
-            self.transformation_builder = DocumentTransformationBuilder(self)
-        self.transformation_builder.refine(topics=topics)
-        return self.transformation_builder
+        transformation_builder = DocumentTransformationBuilder(self)
+        transformation_builder.refine(topics=topics)
+        return transformation_builder
 
-    def translate(self) -> 'DocumentTransformationBuilder':
-        pass
+    def translate(self, language: str) -> 'DocumentTransformationBuilder':
+        transformation_builder = DocumentTransformationBuilder(self)
+        transformation_builder.translate(language=language)
+        return transformation_builder
 
     def interrogate(self) -> 'DocumentTransformationBuilder':
-        pass
+        transformation_builder = DocumentTransformationBuilder(self)
+        transformation_builder.interrogate()
+        return transformation_builder
 
 class DocumentTransformationBuilder:
     '''
@@ -127,11 +125,12 @@ class DocumentTransformationBuilder:
         module_name = "doctran.transformers"
         module = importlib.import_module(module_name)
         try:
+            transformed_document = self.document.copy()
             for transformation in self.transformations:
-                transformer = getattr(module, transformation[0].value)(config=self.document.config, **transformation[1])
-                self.document = await transformer.transform(self.document)
-                self.document.applied_transformations.append(transformation[0])
-            return self.document
+                transformer = getattr(module, transformation[0].value)(config=transformed_document.config, **transformation[1])
+                transformed_document = await transformer.transform(transformed_document)
+            self.transformations = []
+            return transformed_document
         except Exception as e:
             raise Exception(f"Error executing transformation {transformation}: {e}")
 
@@ -143,11 +142,11 @@ class DocumentTransformationBuilder:
         self.transformations.append((Transformation.summarize, {"token_limit": token_limit}))
         return self
 
-    def redact(self, *, entities: List[RecognizerEntity | str]) -> 'DocumentTransformationBuilder':
-        self.transformations.append((Transformation.redact, {"entities": entities}))
+    def redact(self, *, entities: List[RecognizerEntity | str], spacy_model: str, interactive: bool) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.redact, {"entities": entities, "spacy_model": spacy_model, "interactive": interactive}))
         return self
 
-    def refine(self, *, topics: List[str] = None) -> 'DocumentTransformationBuilder':
+    def refine(self, *, topics: List[str]) -> 'DocumentTransformationBuilder':
         self.transformations.append((Transformation.refine, {"topics": topics}))
         return self
 
