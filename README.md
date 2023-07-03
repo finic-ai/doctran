@@ -21,7 +21,7 @@
 </a>
 </p>
 
-Vector databases are useful for retrieving context for LLMs, however they struggle to find relevant information if the source documents are indexed hapharzardly and information is sparse. Doctran uses LLMs and open source NLP libraries to transform raw text into clean, structured, information-dense documents that are optimized for vector space retrieval.
+Vector databases are useful for retrieving context for LLMs, however they struggle to find relevant information if the source documents are indexed hapharzardly and information is sparse. Doctran uses LLMs and open source NLP libraries to transform raw text into clean, structured, information-dense documents that are optimized for vector space retrieval. You can think of Doctran as a black box where messy strings go in and nice, clean, labelled strings come out.
 
 Doctran is maintained by [Psychic](https://github.com/psychic-api/psychic), the data integration layer for LLMs.
 
@@ -48,7 +48,7 @@ Clone or download [`examples.ipynb`](/examples.ipynb) for interactive demos.
 ...
 ```
 
-#### Into structured or semi-structured documents that are optimized for vector search.
+#### Into semi-structured documents that are optimized for vector search.
 
 ```
 {
@@ -112,7 +112,7 @@ document = await document.redact(entities=["EMAIL_ADDRESS", "PHONE_NUMBER"]).ext
 ## Doctransformers
 
 ### Extract
-Given any valid JSON schema, yses OpenAI function calling to extract structured data from a document.
+Given any valid JSON schema, uses OpenAI function calling to extract structured data from a document.
 
 ```python
 from doctran import ExtractProperty
