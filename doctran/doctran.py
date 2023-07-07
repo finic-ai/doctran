@@ -1,5 +1,6 @@
 import os
 import importlib
+import yaml
 import openai
 import uuid
 from enum import Enum
@@ -82,6 +83,10 @@ class Document(BaseModel):
     config: DoctranConfig
     extracted_properties: Optional[Dict[str, Any]] = {}
     metadata: Optional[Dict[str, Any]] = None
+
+    def properties_as_yaml(self) -> str:
+        yaml_out = yaml.dump(self.extracted_properties, sort_keys=False)
+        return yaml_out
 
     def extract(self, *, properties: List[ExtractProperty]) -> 'DocumentTransformationBuilder':
         transformation_builder = DocumentTransformationBuilder(self)
