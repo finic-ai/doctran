@@ -8,7 +8,6 @@ from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel
-import requests
 import tiktoken
 from doctran import Document, DoctranConfig, ExtractProperty, RecognizerEntity
 

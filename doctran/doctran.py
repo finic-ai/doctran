@@ -10,7 +10,6 @@ from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel
-import requests
 
 class ExtractProperty(BaseModel):
     name: str
@@ -81,7 +80,7 @@ class Document(BaseModel):
     raw_content: str
     transformed_content: str
     config: DoctranConfig
-    extracted_properties: Optional[Dict[str, Any]] = {}
+    extracted_properties: Optional[Dict] = {}
     metadata: Optional[Dict[str, Any]] = None
 
     def properties_as_yaml(self) -> str:
