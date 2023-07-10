@@ -94,7 +94,7 @@ class Document(BaseModel):
         transformation_builder.summarize(token_limit=token_limit)
         return transformation_builder
 
-    def redact(self, *, entities: List[RecognizerEntity | str], spacy_model: str = "en_core_web_md", interactive: bool = True) -> 'DocumentTransformationBuilder':
+    def redact(self, *, entities: List[Union[RecognizerEntity, str]], spacy_model: str = "en_core_web_md", interactive: bool = True) -> 'DocumentTransformationBuilder':
         transformation_builder = DocumentTransformationBuilder(self)
         transformation_builder.redact(entities=entities, spacy_model=spacy_model, interactive=interactive)
         return transformation_builder
@@ -143,7 +143,7 @@ class DocumentTransformationBuilder:
         self.transformations.append((Transformation.summarize, {"token_limit": token_limit}))
         return self
 
-    def redact(self, *, entities: List[RecognizerEntity | str], spacy_model: str, interactive: bool) -> 'DocumentTransformationBuilder':
+    def redact(self, *, entities: List[Union[RecognizerEntity, str]], spacy_model: str, interactive: bool) -> 'DocumentTransformationBuilder':
         self.transformations.append((Transformation.redact, {"entities": entities, "spacy_model": spacy_model, "interactive": interactive}))
         return self
 

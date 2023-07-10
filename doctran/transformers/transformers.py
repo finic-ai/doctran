@@ -6,7 +6,7 @@ from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel
 import tiktoken
 from doctran import Document, DoctranConfig, ExtractProperty, RecognizerEntity
@@ -23,7 +23,7 @@ class OpenAIChatCompletionCall(BaseModel):
 
 class OpenAIFunctionCall(OpenAIChatCompletionCall):
     functions: List[Dict[str, Any]]
-    function_call: str | Dict[str, Any]
+    function_call: Union[str, Dict[str, Any]]
 
 class DocumentTransformer(ABC):
     config: DoctranConfig
@@ -80,7 +80,7 @@ class OpenAIDocumentTransformer(DocumentTransformer):
             first_value = next(iter(arguments.values()))
             if len(arguments) > 1 or not isinstance(first_value, str):
                 # If multiple arguments or a dict/list is returned, treat arguments as extracted values
-                document.extracted_properties = document.extracted_properties | arguments
+                document.extracted_properties = document.extracted_properties or arguments
             else:
                 # If there is only one argument and it's a string, treat arguments as transformed content
                 document.transformed_content = first_value
@@ -143,7 +143,7 @@ class DocumentRedactor(DocumentTransformer):
     spacy_model: str
     interactive: bool
 
-    def __init__(self, *, config: DoctranConfig, entities: List[RecognizerEntity | str] = None, spacy_model: str = "en_core_web_md", interactive: bool = True) -> None:
+    def __init__(self, *, config: DoctranConfig, entities: List[Union[RecognizerEntity, str]] = None, spacy_model: str = "en_core_web_md", interactive: bool = True) -> None:
         super().__init__(config)
         # TODO: support multiple NER models and sizes
         # Entities can be provided as either a string or enum, so convert to string in a all cases
