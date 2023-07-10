@@ -5,17 +5,14 @@ import openai
 import uuid
 from enum import Enum
 import spacy
-from presidio_analyzer import AnalyzerEngine
-from presidio_analyzer.nlp_engine import NlpEngineProvider
-from presidio_anonymizer import AnonymizerEngine
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal, Union
 from pydantic import BaseModel
 
 class ExtractProperty(BaseModel):
     name: str
     description: str
     type: Literal["string", "number", "boolean", "array", "object"]
-    items: Optional[List | Dict[str, Any]]
+    items: Optional[Union[List, Dict[str, Any]]]
     enum: Optional[List[str]]
     required: bool = True
 
