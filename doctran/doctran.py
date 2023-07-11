@@ -122,14 +122,14 @@ class DocumentTransformationBuilder:
         self.document = document
         self.transformations = []
     
-    async def execute(self) -> Document:
+    def execute(self) -> Document:
         module_name = "doctran.transformers"
         module = importlib.import_module(module_name)
         try:
             transformed_document = self.document.copy()
             for transformation in self.transformations:
                 transformer = getattr(module, transformation[0].value)(config=transformed_document.config, **transformation[1])
-                transformed_document = await transformer.transform(transformed_document)
+                transformed_document = transformer.transform(transformed_document)
             self.transformations = []
             return transformed_document
         except Exception as e:

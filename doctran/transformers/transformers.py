@@ -32,7 +32,7 @@ class DocumentTransformer(ABC):
         self.config = config
 
     @abstractmethod
-    async def transform(self, document: Document) -> Document:
+    def transform(self, document: Document) -> Document:
         pass
 
 class OpenAIDocumentTransformer(DocumentTransformer):
@@ -46,7 +46,7 @@ class OpenAIDocumentTransformer(DocumentTransformer):
             "required": [],
         }
     
-    async def transform(self, document: Document) -> Document:
+    def transform(self, document: Document) -> Document:
         encoding = tiktoken.encoding_for_model(self.config.openai_model)
         content_token_size = len(encoding.encode(document.transformed_content))
         try:
@@ -55,9 +55,9 @@ class OpenAIDocumentTransformer(DocumentTransformer):
         except Exception as e:
             print(e)
             return document
-        return await self.executeOpenAICall(document)
+        return self.executeOpenAICall(document)
 
-    async def executeOpenAICall(self, document: Document) -> Document:
+    def executeOpenAICall(self, document: Document) -> Document:
         try:
             function_call = OpenAIFunctionCall(
                 model=self.config.openai_model, 
@@ -158,7 +158,7 @@ class DocumentRedactor(DocumentTransformer):
                 raise Exception(f"Invalid entity type: {entity}")
         self.entities = entities
     
-    async def transform(self, document: Document) -> Document:
+    def transform(self, document: Document) -> Document:
         try:
             spacy.load(self.spacy_model)
         except OSError:
