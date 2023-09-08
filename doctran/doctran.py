@@ -17,9 +17,7 @@ class ExtractProperty(BaseModel):
     required: bool = True
 
 class DoctranConfig(BaseModel):
-    openai_api_key: str
     openai_model: str
-    openai_completions_url: str
     openai: Any
     openai_token_limit: int
 
@@ -163,9 +161,7 @@ class DocumentTransformationBuilder:
 class Doctran:
     def __init__(self, openai_api_key: str = None, openai_model: str = "gpt-4", openai_token_limit: int = 8000):
         self.config = DoctranConfig(
-            openai_api_key=openai_api_key,
             openai_model=openai_model,
-            openai_completions_url="https://api.openai.com/v1/completions",
             openai=openai,
             openai_token_limit=openai_token_limit
         )
