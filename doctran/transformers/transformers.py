@@ -16,6 +16,7 @@ class TooManyTokensException(Exception):
         super().__init__(f"OpenAI document transformation failed. The document is {content_token_size} tokens long, which exceeds the token limit of {token_limit}.")
 
 class OpenAIChatCompletionCall(BaseModel):
+    deployment_id: Optional[str] = None
     model: str = "gpt-3.5-turbo-0613"
     messages: List[Dict[str, str]]
     temperature: int = 0
@@ -60,6 +61,7 @@ class OpenAIDocumentTransformer(DocumentTransformer):
     def executeOpenAICall(self, document: Document) -> Document:
         try:
             function_call = OpenAIFunctionCall(
+                deployment_id=self.config.openai_deployment_id,
                 model=self.config.openai_model, 
                 messages=[{"role": "user", "content": document.transformed_content}], 
                 functions=[{
