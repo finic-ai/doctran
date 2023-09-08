@@ -167,7 +167,7 @@ class Doctran:
         )
         if openai_api_key:
             self.config.openai.api_key = openai_api_key
-        elif os.environ["OPENAI_API_KEY"]:
+        elif os.environ.get("OPENAI_API_KEY"):
             self.config.openai.api_key = os.environ["OPENAI_API_KEY"]
         else:
             raise Exception("No OpenAI API Key provided")
