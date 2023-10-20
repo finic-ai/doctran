@@ -6,9 +6,6 @@
   <p align="center"><b>Doc</b>ument <b>tran</b>sformation framework to improve vector search results</p>
 </p>
 <p align="center">
-<a href="https://join.slack.com/t/psychicapi/shared_invite/zt-1yptnhwcz-SiOCnrbqnBDsuzps9sEMSw" target="_blank">
-    <img src="https://img.shields.io/badge/slack-join-blue.svg?logo=slack" alt="Slack">
-</a>
 </a>
 <a href="https://github.com/psychic-api/doctran/blob/main/LICENSE" target="_blank">
     <img src="https://img.shields.io/static/v1?label=license&message=MIT&color=blue" alt="License">
@@ -16,14 +13,11 @@
 <a href="https://github.com/psychic-api/doctran/issues" target="_blank">
     <img src="https://img.shields.io/github/issues/psychic-api/doctran?color=blue" alt="Issues">
 </a>
-  <a href="https://twitter.com/psychicapi" target="_blank">
-    <img src="https://img.shields.io/twitter/follow/psychicapi?style=social" alt="Twitter">
-</a>
 </p>
 
 Vector databases are useful for retrieving context for LLMs, however they struggle to find relevant information if the source documents are indexed haphazardly and information is sparse. Doctran uses LLMs and open source NLP libraries to transform raw text into clean, structured, information-dense documents that are optimized for vector space retrieval. You can think of Doctran as a black box where messy strings go in and nice, clean, labelled strings come out.
 
-Doctran is maintained by [Psychic](https://github.com/psychic-api/psychic), the data integration layer for LLMs.
+Doctran is (lightly) maintained by [jasonwcfan](https://github.com/jasonwcfan).
 
 ## Examples
 Clone or download [`examples.ipynb`](/examples.ipynb) for interactive demos.
