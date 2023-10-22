@@ -3,7 +3,7 @@
 </h2>
 
 <p align="center">
-  <p align="center"><b>Doc</b>ument <b>tran</b>sformation framework to improve vector search results</p>
+  <p align="center"><b>Doc</b>ument <b>tran</b>sformation framework - use LLMs to process complex strings with natural language instructions.</p>
 </p>
 <p align="center">
 </a>
@@ -14,8 +14,7 @@
     <img src="https://img.shields.io/github/issues/psychic-api/doctran?color=blue" alt="Issues">
 </a>
 </p>
-
-Vector databases are useful for retrieving context for LLMs, however they struggle to find relevant information if the source documents are indexed haphazardly and information is sparse. Doctran uses LLMs and open source NLP libraries to transform raw text into clean, structured, information-dense documents that are optimized for vector space retrieval. You can think of Doctran as a black box where messy strings go in and nice, clean, labelled strings come out.
+There are certain applications that require documents to be parsed where human-level judgement matters more than speed. E.g. labelling transactions, or extracting semantic information from texts. In these cases, RegEx can be too inflexible, but LLMs are ideal. One way to think of Doctran is a LLM-powered black box where messy strings go in and nice, clean, labelled strings come out. Another way to think about it is a modular, declarative wrapper over OpenAI's functional calling feature that significantly improves the developer experience.
 
 Doctran is (lightly) maintained by [jasonwcfan](https://github.com/jasonwcfan).
 
