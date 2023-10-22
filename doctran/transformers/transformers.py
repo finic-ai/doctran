@@ -1,5 +1,6 @@
 from enum import Enum
 import json
+import re
 from abc import ABC, abstractmethod
 import spacy
 from presidio_analyzer import AnalyzerEngine
@@ -274,3 +275,63 @@ class DocumentInterrogator(OpenAIDocumentTransformer):
             },
         }
         self.function_parameters["required"].append("questions_and_answers")
+
+class DocumentTemplateProcessor(OpenAIDocumentTransformer):
+    '''
+    Use OpenAI function calling to replace a given template pattern in the document with the instructions provided within each placeholder.
+
+    For example: "Let's meet on {random day of the week}" -> "Let's meet on Monday"
+
+    Returns:
+        Document: the interrogated document represented as a Doctran Document
+    '''
+    def __init__(self, *, config: DoctranConfig, template_regex: str) -> None:
+        super().__init__(config)
+        try:
+            re.compile(template_regex)
+        except re.error as e:
+            raise Exception(f"Provided template pattern is not valid regex: {e}")
+
+        self.template_regex = template_regex
+        self.function_name = "process_template"
+        self.function_description = f"Find and replace placeholders that match the regex '{template_regex}' with the instructions provided within each placeholder."
+        self.function_parameters["properties"]["replacements"] = {
+            "type": "array",
+            "description": "A list of replacements that should occur in the template",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "index": {
+                        "type": "integer",
+                        "description": "The index of the replacement, in the order each placeholder appears in the template.",
+                    },
+                    "placeholder": {
+                        "type": "string",
+                        "description": "The original placeholder with instructions on how to replace it.",
+                    },
+                    "replaced_value": {
+                        "type": "string",
+                        "description": "The value to replace the placeholder with, based on the instructions provided within the placeholder.",
+                    },
+                },
+                "required": ["question", "answer"],
+            },
+        }
+        self.function_parameters["required"].append("questions_and_answers")
+
+    def transform(self, document: Document) -> Document:
+        text = document.transformed_content
+
+        encoding = tiktoken.encoding_for_model(self.config.openai_model)
+        content_token_size = len(encoding.encode(document.transformed_content))
+        try:
+            if content_token_size > self.config.openai_token_limit:
+                raise TooManyTokensException(content_token_size, self.config.openai_token_limit)
+            document = self.executeOpenAICall(document)
+            # Rather than relying on OpenAI to replace the placeholders, we do it ourselves to ensure non-templatized parts of the text are not modified
+            replacements = [replacement["replaced_value"] for replacement in sorted(document.extracted_properties["replacements"], key=lambda r: r["index"])]
+            document.transformed_content = re.sub(self.template_regex, lambda _: replacements.pop(0), text)
+            return document
+        except Exception as e:
+            print(e)
+            return document

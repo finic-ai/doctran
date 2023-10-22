@@ -35,6 +35,7 @@ class Transformation(Enum):
     interrogate = "DocumentInterrogator"
     redact = "DocumentRedactor"
     translate = "DocumentTranslator"
+    process_template = "DocumentTemplateProcessor"
 
 # Not easily retrievalble from the presidio library so it should be kept up to date manually based on
 # https://microsoft.github.io/presidio/supported_entities/
@@ -112,6 +113,11 @@ class Document(BaseModel):
         transformation_builder = DocumentTransformationBuilder(self)
         transformation_builder.interrogate()
         return transformation_builder
+    
+    def process_template(self, *, template_regex: str) -> 'DocumentTransformationBuilder':
+        transformation_builder = DocumentTransformationBuilder(self)
+        transformation_builder.process_template(template_regex=template_regex)
+        return transformation_builder
 
 class DocumentTransformationBuilder:
     '''
@@ -157,7 +163,10 @@ class DocumentTransformationBuilder:
     def interrogate(self) -> 'DocumentTransformationBuilder':
         self.transformations.append((Transformation.interrogate, {}))
         return self
-
+    
+    def process_template(self, *, template_regex: str) -> 'DocumentTransformationBuilder':
+        self.transformations.append((Transformation.process_template, {"template_regex": template_regex}))
+        return self
 
 class Doctran:
     def __init__(self, openai_api_key: str = None, openai_model: str = "gpt-4", openai_token_limit: int = 8000, openai_deployment_id: Optional[str] = None):
