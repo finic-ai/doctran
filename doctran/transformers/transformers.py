@@ -2,11 +2,6 @@ from enum import Enum
 import json
 import re
 from abc import ABC, abstractmethod
-import spacy
-from presidio_analyzer import AnalyzerEngine
-from presidio_analyzer.nlp_engine import NlpEngineProvider
-from presidio_anonymizer import AnonymizerEngine
-from presidio_anonymizer.entities import OperatorConfig
 from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel
 import tiktoken
@@ -162,6 +157,11 @@ class DocumentRedactor(DocumentTransformer):
         self.entities = entities
     
     def transform(self, document: Document) -> Document:
+        import spacy
+        from presidio_analyzer import AnalyzerEngine
+        from presidio_analyzer.nlp_engine import NlpEngineProvider
+        from presidio_anonymizer import AnonymizerEngine
+        from presidio_anonymizer.entities import OperatorConfig
         try:
             spacy.load(self.spacy_model)
         except OSError:
