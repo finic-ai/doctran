@@ -4,7 +4,6 @@ import yaml
 import openai
 import uuid
 from enum import Enum
-import spacy
 from typing import List, Optional, Dict, Any, Literal, Union
 from pydantic import BaseModel
 

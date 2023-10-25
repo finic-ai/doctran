@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "doctran"
-version = "0.0.13"
+version = "0.0.14"
 description = "Document transformation framework for vector based retrieval"
 authors = ["Jason Fan <jason.wc.fan@gmail.com>", "Ayan Bandyopadhyay <ayanb9440@gmail.com>"]
 readme = "README.md"
