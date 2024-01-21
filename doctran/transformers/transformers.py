@@ -12,19 +12,19 @@ class TooManyTokensException(Exception):
         super().__init__(f"OpenAI document transformation failed. The document is {content_token_size} tokens long, which exceeds the token limit of {token_limit}.")
 
 class OpenAIChatCompletionCall(BaseModel):
-    deployment_id: Optional[str] = None
+    seed: Optional[str] = None
     model: str = "gpt-3.5-turbo-0613"
     messages: List[Dict[str, str]]
     temperature: int = 0
     max_tokens: Optional[int] = None
 
 class OpenAIFunctionCall(OpenAIChatCompletionCall):
-    functions: List[Dict[str, Any]]
-    function_call: Union[str, Dict[str, Any]]
+    tools: List[Dict[str, Any]]
+    tool_choice: Union[str, Dict[str, Any]]
 
 class DocumentTransformer(ABC):
     config: DoctranConfig
-    
+
     def __init__(self, config: DoctranConfig) -> None:
         self.config = config
 
@@ -34,7 +34,7 @@ class DocumentTransformer(ABC):
 
 class OpenAIDocumentTransformer(DocumentTransformer):
     function_parameters: Dict[str, Any]
-    
+
     def __init__(self, config: DoctranConfig) -> None:
         super().__init__(config)
         self.function_parameters = {
@@ -42,7 +42,7 @@ class OpenAIDocumentTransformer(DocumentTransformer):
             "properties": {},
             "required": [],
         }
-    
+
     def transform(self, document: Document) -> Document:
         encoding = tiktoken.encoding_for_model(self.config.openai_model)
         content_token_size = len(encoding.encode(document.transformed_content))
@@ -57,18 +57,21 @@ class OpenAIDocumentTransformer(DocumentTransformer):
     def executeOpenAICall(self, document: Document) -> Document:
         try:
             function_call = OpenAIFunctionCall(
-                deployment_id=self.config.openai_deployment_id,
-                model=self.config.openai_model, 
-                messages=[{"role": "user", "content": document.transformed_content}], 
-                functions=[{
-                    "name": self.function_name,
-                    "description": self.function_description,
-                    "parameters": self.function_parameters,
+                seed=self.config.openai_deployment_id,
+                model=self.config.openai_model,
+                messages=[{"role": "user", "content": document.transformed_content}],
+                tools=[{
+                    "type": "function",
+                    "function": {
+                        "name": self.function_name,
+                        "description": self.function_description,
+                        "parameters": self.function_parameters,
+                    }
                 }],
-                function_call={"name": self.function_name}
+                tool_choice={"type": "function", "function": {"name": self.function_name}}
             )
-            completion = self.config.openai.ChatCompletion.create(**function_call.dict())
-            arguments = completion.choices[0].message["function_call"]["arguments"]
+            completion = self.config.openai.chat.completions.create(**function_call.dict())
+            arguments = completion.choices[0].message.tool_calls[0].function.arguments
             try:
                 arguments = json.loads(arguments)
             except Exception as e:
@@ -155,7 +158,7 @@ class DocumentRedactor(DocumentTransformer):
             else:
                 raise Exception(f"Invalid entity type: {entity}")
         self.entities = entities
-    
+
     def transform(self, document: Document) -> Document:
         import spacy
         from presidio_analyzer import AnalyzerEngine
@@ -194,10 +197,10 @@ class DocumentRedactor(DocumentTransformer):
                                    entities=self.entities if self.entities else None,
                                    language='en')
         # TODO: Define customer operator to replace data types with numbered placeholders to differentiate between different PERSONs, EMAILs, etc
-        anonymized_data = anonymizer.anonymize(text=text, 
+        anonymized_data = anonymizer.anonymize(text=text,
                                                analyzer_results=results,
                                                operators={"DEFAULT": OperatorConfig("replace")})
-        
+
         # Extract just the anonymized text, discarding items metadata
         anonymized_text = anonymized_data.text
         document.transformed_content = anonymized_text
