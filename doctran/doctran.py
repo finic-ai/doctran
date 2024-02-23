@@ -1,8 +1,8 @@
 import os
 import importlib
 import yaml
-import openai
 import uuid
+from openai import OpenAI
 from enum import Enum
 from typing import List, Optional, Dict, Any, Literal, Union
 from pydantic import BaseModel
@@ -171,13 +171,16 @@ class Doctran:
     def __init__(self, openai_api_key: str = None, openai_model: str = "gpt-4", openai_token_limit: int = 8000, openai_deployment_id: Optional[str] = None):
         self.config = DoctranConfig(
             openai_model=openai_model,
-            openai=openai,
+            openai=None,
             openai_token_limit=openai_token_limit
         )
+        
+        params = {}
+
         if openai_api_key:
-            self.config.openai.api_key = openai_api_key
+            params["api_key"] = openai_api_key
         elif os.environ.get("OPENAI_API_KEY"):
-            self.config.openai.api_key = os.environ["OPENAI_API_KEY"]
+            params["api_key"] = os.environ["OPENAI_API_KEY"]
         else:
             raise Exception("No OpenAI API Key provided")
 
@@ -187,11 +190,13 @@ class Doctran:
             self.config.openai_deployment_id = os.environ["OPENAI_DEPLOYMENT_ID"]
 
         if os.environ.get('OPENAI_API_TYPE'):
-            self.config.openai.api_type = os.environ['OPENAI_API_TYPE']
+            params["api_type"] = os.environ['OPENAI_API_TYPE']
         if os.environ.get('OPENAI_API_BASE'):
-            self.config.openai.api_base = os.environ['OPENAI_API_BASE']
+            params["api_base"] = os.environ['OPENAI_API_BASE']
         if os.environ.get('OPENAI_API_VERSION'):
-            self.config.openai.api_version = os.environ['OPENAI_API_VERSION']
+            params["api_version"] = os.environ['OPENAI_API_VERSION']
+
+        self.config.openai = OpenAI(**params)
 
     def parse(self, *, content: str, content_type: ContentType = "text", uri: str = None, metadata: dict = None) -> Document:
         '''
