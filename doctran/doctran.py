@@ -15,6 +15,10 @@ class ExtractProperty(BaseModel):
     enum: Optional[List[str]]
     required: bool = True
 
+class OpenAIConfig(BaseModel):
+    api_key: str
+    base_url: Optional[str]
+    
 class DoctranConfig(BaseModel):
     openai_deployment_id: Optional[str]
     openai_model: str
@@ -174,13 +178,11 @@ class Doctran:
             openai=None,
             openai_token_limit=openai_token_limit
         )
-        
-        params = {}
 
         if openai_api_key:
-            params["api_key"] = openai_api_key
+            openai_config = OpenAIConfig(api_key=openai_api_key)
         elif os.environ.get("OPENAI_API_KEY"):
-            params["api_key"] = os.environ["OPENAI_API_KEY"]
+            openai_config = OpenAIConfig(api_key=os.environ["OPENAI_API_KEY"])
         else:
             raise Exception("No OpenAI API Key provided")
 
@@ -189,14 +191,10 @@ class Doctran:
         elif os.environ.get("OPENAI_DEPLOYMENT_ID"):
             self.config.openai_deployment_id = os.environ["OPENAI_DEPLOYMENT_ID"]
 
-        if os.environ.get('OPENAI_API_TYPE'):
-            params["api_type"] = os.environ['OPENAI_API_TYPE']
         if os.environ.get('OPENAI_API_BASE'):
-            params["api_base"] = os.environ['OPENAI_API_BASE']
-        if os.environ.get('OPENAI_API_VERSION'):
-            params["api_version"] = os.environ['OPENAI_API_VERSION']
+            openai_config.base_url = os.environ['OPENAI_API_BASE']
 
-        self.config.openai = OpenAI(**params)
+        self.config.openai = OpenAI(**openai_config.dict())
 
     def parse(self, *, content: str, content_type: ContentType = "text", uri: str = None, metadata: dict = None) -> Document:
         '''
