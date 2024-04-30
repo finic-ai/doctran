@@ -83,6 +83,7 @@ class OpenAIDocumentTransformer(DocumentTransformer):
                                 f"Setting a higher token limit may fix this error. JSON returned: {arguments}")
             first_value = next(iter(arguments.values()))
             if len(arguments) > 1 or not isinstance(first_value, str):
+                # If multiple arguments or a dict/list is returned, treat arguments as extracted values
                 document.extracted_properties = document.extracted_properties or arguments
             else:
                 # If there is only one argument and it's a string, treat arguments as transformed content
