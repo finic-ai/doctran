@@ -75,7 +75,7 @@ class Document(BaseModel):
     content_type: ContentType
     raw_content: str
     transformed_content: str
-    system: str
+    system: Optional[str]
     config: DoctranConfig
     extracted_properties: Optional[Dict] = {}
     metadata: Optional[Dict[str, Any]] = None
@@ -194,7 +194,7 @@ class Doctran:
         if os.environ.get('OPENAI_API_VERSION'):
             self.config.openai.api_version = os.environ['OPENAI_API_VERSION']
 
-    def parse(self, *, content: str,system:str, content_type: ContentType = "text", uri: str = None, metadata: dict = None) -> Document:
+    def parse(self, *, content: str,system: Optional[str] = None, content_type: ContentType = "text", uri: str = None, metadata: dict = None) -> Document:
         '''
         Parse raw text and apply different chunking schemes based on the content type.
 
