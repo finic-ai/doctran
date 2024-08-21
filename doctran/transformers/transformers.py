@@ -7,6 +7,7 @@ from pydantic import BaseModel
 import tiktoken
 from doctran import Document, DoctranConfig, ExtractProperty, RecognizerEntity
 
+
 class TooManyTokensException(Exception):
     def __init__(self, content_token_size: int, token_limit: int):
         super().__init__(f"OpenAI document transformation failed. The document is {content_token_size} tokens long, which exceeds the token limit of {token_limit}.")
@@ -59,7 +60,9 @@ class OpenAIDocumentTransformer(DocumentTransformer):
             function_call = OpenAIFunctionCall(
                 seed=self.config.openai_deployment_id,
                 model=self.config.openai_model,
-                messages=[{"role": "user", "content": document.transformed_content}],
+                messages=[{"role": "system", "content":document.system},
+                    
+                    {"role": "user", "content": document.transformed_content}],
                 tools=[{
                     "type": "function",
                     "function": {
