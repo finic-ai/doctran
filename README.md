@@ -1,3 +1,5 @@
+> **Doctran is a legacy project built by the team behind Finic (formerly Psychic) and is no longer actively developed.** Finic now builds AI to stop fraud, abuse and financial crimes: [Finic Grayson](https://docs.finic.ai), a decision model API for real-time fraud and risk decisions, and agents for fraud investigations. See [finic.ai](https://finic.ai).
+
 <h2 align="center">
 🐛 Doctran
 </h2>
